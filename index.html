@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SIM Manager</title>
+  <title>Mone Manager</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet" />
 </head>
 <body>
@@ -14,8 +13,8 @@
   <div class="lock-screen" id="lockScreen">
     <div class="lock-card">
       <div class="lock-icon">🔒</div>
-      <h1 class="lock-title">Mone SIM-карты</h1>
-      <p class="lock-sub">Корпоративное управление номерами</p>
+      <h1 class="lock-title">Mone Manager</h1>
+      <p class="lock-sub">Корпоративное управление расходами</p>
       <div class="lock-input-wrap">
         <input type="password" id="lockPassword" class="lock-input" placeholder="Введите пароль" autocomplete="off" />
         <button class="lock-btn" id="lockBtn">Войти</button>
@@ -24,7 +23,7 @@
     </div>
   </div>
 
-  <!-- APP (hidden until logged in) -->
+  <!-- APP -->
   <div class="app" id="app" style="display:none;">
 
     <!-- HEADER -->
@@ -35,7 +34,7 @@
             <span class="logo-icon">◈</span>
           </div>
           <div>
-            <div class="logo-title">Mone</div>
+            <div class="logo-title">Mone Manager</div>
             <div class="logo-sub" id="headerDate"></div>
           </div>
         </div>
@@ -44,17 +43,6 @@
           <div class="pill pill-neutral"><span id="countTotal">0</span> всего</div>
           <div class="pill pill-warn" id="pillWarn" style="display:none"><span id="countWarning">0</span> ⚠ скоро</div>
           <div class="pill pill-danger" id="pillDanger" style="display:none"><span id="countDanger">0</span> 🔴 срочно</div>
-        </div>
-
-        <!-- Firebase sync indicator -->
-        <div id="syncIndicator" title="Синхронизация с Firebase" style="
-          display:flex;align-items:center;gap:6px;
-          font-size:12px;font-weight:500;color:#34c759;
-          background:rgba(52,199,89,0.1);border:1px solid rgba(52,199,89,0.25);
-          border-radius:100px;padding:4px 12px;white-space:nowrap;flex-shrink:0;
-        ">
-          <span style="width:7px;height:7px;border-radius:50%;background:#34c759;display:inline-block;animation:pill-pulse 2s ease-in-out infinite;"></span>
-          Firebase
         </div>
 
         <button class="header-logout" id="btnLogout" title="Выйти">⎋ Выйти</button>
@@ -67,20 +55,70 @@
       <span id="alertText"></span>
     </div>
 
-    <!-- MAIN -->
+    <!-- MAIN — 3 COLUMNS -->
     <main class="main">
-      <div class="section-header">
-        <h2 class="section-title">Корпоративные SIM-карты</h2>
-        <button class="btn-add-top" id="btnAddTop">
-          <span>+</span> Добавить номер
-        </button>
-      </div>
+      <div class="columns-layout">
 
-      <div class="cards-grid" id="cardsGrid"></div>
+        <!-- ══ COLUMN 1: PHONES ══ -->
+        <div class="category-column" id="colPhones">
+          <div class="col-header">
+            <div class="col-title-wrap">
+              <span class="col-icon">📱</span>
+              <div>
+                <div class="col-title">Телефоны</div>
+                <div class="col-sub">SIM-карты и корпоративные номера</div>
+              </div>
+            </div>
+            <button class="btn-col-add" data-cat="phone">+ Добавить</button>
+          </div>
+          <div class="col-stats" id="statsPhone"></div>
+          <div class="col-cards" id="cardsPhone"></div>
+        </div>
+
+        <!-- ══ COLUMN 2: WIFI ══ -->
+        <div class="category-column" id="colWifi">
+          <div class="col-header">
+            <div class="col-title-wrap">
+              <span class="col-icon">📶</span>
+              <div>
+                <div class="col-title">Wi-Fi</div>
+                <div class="col-sub">Интернет-провайдеры и точки доступа</div>
+              </div>
+            </div>
+            <button class="btn-col-add" data-cat="wifi">+ Добавить</button>
+          </div>
+          <div class="col-stats" id="statsWifi"></div>
+          <div class="col-cards" id="cardsWifi"></div>
+        </div>
+
+        <!-- ══ COLUMN 3: CARS / GPS ══ -->
+        <div class="category-column" id="colCars">
+          <div class="col-header">
+            <div class="col-title-wrap">
+              <span class="col-icon">🚗</span>
+              <div>
+                <div class="col-title">Машины / GPS</div>
+                <div class="col-sub">Трекеры, страховки, топливо</div>
+              </div>
+            </div>
+            <button class="btn-col-add" data-cat="car">+ Добавить</button>
+          </div>
+          <div class="col-stats" id="statsCar"></div>
+          <div class="col-cards" id="cardsCar"></div>
+        </div>
+
+      </div>
     </main>
 
     <!-- FAB -->
-    <button class="fab" id="fabAdd">+</button>
+    <div class="fab-wrap">
+      <div class="fab-menu" id="fabMenu">
+        <button class="fab-item" data-cat="phone">📱 Телефон</button>
+        <button class="fab-item" data-cat="wifi">📶 Wi-Fi</button>
+        <button class="fab-item" data-cat="car">🚗 Машина</button>
+      </div>
+      <button class="fab" id="fabAdd">+</button>
+    </div>
 
   </div><!-- /app -->
 
@@ -91,6 +129,7 @@
       <div class="sheet-handle"></div>
 
       <div class="view-header">
+        <div class="view-cat-badge" id="vCatBadge"></div>
         <div class="view-status-badge" id="vStatusBadge"></div>
         <div class="view-number" id="vNumber"></div>
         <div class="view-meta" id="vMeta"></div>
@@ -122,13 +161,15 @@
   </div>
 
 
-  <!-- ═══ EDIT / ADD MODAL ═══ -->
+  <!-- ═══ EDIT / ADD MODAL (PHONE) ═══ -->
   <div class="overlay" id="editOverlay">
     <div class="sheet edit-sheet" id="editSheet">
       <div class="sheet-handle"></div>
       <div class="edit-title" id="editTitle">Добавить номер</div>
+      <div class="edit-cat-indicator" id="editCatIndicator"></div>
 
-      <div class="edit-form">
+      <!-- PHONE FIELDS -->
+      <div class="edit-form" id="formPhone">
         <div class="form-group">
           <label>Номер телефона</label>
           <input type="text" id="ePhone" placeholder="+998 90 123 45 67" />
@@ -187,6 +228,108 @@
         </div>
       </div>
 
+      <!-- WIFI FIELDS -->
+      <div class="edit-form" id="formWifi" style="display:none;">
+        <div class="form-group">
+          <label>Название / Адрес точки</label>
+          <input type="text" id="wName" placeholder="Офис центральный — Wi-Fi" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Компания</label>
+            <input type="text" id="wCompany" placeholder="ООО Ромашка" />
+          </div>
+          <div class="form-group">
+            <label>Провайдер</label>
+            <select id="wProvider">
+              <option>Uztelecom</option>
+              <option>Sarkor</option>
+              <option>Perfectum</option>
+              <option>Comnet</option>
+              <option>Ucell Broadband</option>
+              <option>Другой</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Скорость / Тариф</label>
+          <input type="text" id="wTariff" placeholder="100 Мбит/с — Безлимит" />
+        </div>
+        <div class="form-group">
+          <label>Адрес объекта</label>
+          <input type="text" id="wAddress" placeholder="г. Ташкент, ул. Навои 1" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Ежемесячная оплата</label>
+            <input type="text" id="wFee" placeholder="250 000 сум" />
+          </div>
+          <div class="form-group">
+            <label>День оплаты (1–31)</label>
+            <input type="number" id="wPayDay" min="1" max="31" placeholder="10" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Договор / Лицевой счёт</label>
+          <input type="text" id="wContract" placeholder="№ 123456" />
+        </div>
+        <div class="form-group">
+          <label>Примечание</label>
+          <input type="text" id="wNote" placeholder="Любая заметка..." />
+        </div>
+      </div>
+
+      <!-- CAR / GPS FIELDS -->
+      <div class="edit-form" id="formCar" style="display:none;">
+        <div class="form-group">
+          <label>Автомобиль</label>
+          <input type="text" id="cName" placeholder="Chevrolet Nexia — 01 ABC 123" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Компания</label>
+            <input type="text" id="cCompany" placeholder="ООО Ромашка" />
+          </div>
+          <div class="form-group">
+            <label>Тип расхода</label>
+            <select id="cType">
+              <option>GPS-трекер</option>
+              <option>Страховка</option>
+              <option>Топливная карта</option>
+              <option>Тех. обслуживание</option>
+              <option>Аренда</option>
+              <option>Другое</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Водитель / Ответственный</label>
+          <input type="text" id="cDriver" placeholder="Иванов Иван" />
+        </div>
+        <div class="form-group">
+          <label>GPS-провайдер / Страховщик</label>
+          <input type="text" id="cProvider" placeholder="Uzauto GPS / Alfa Insurance" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Ежемесячная оплата</label>
+            <input type="text" id="cFee" placeholder="80 000 сум" />
+          </div>
+          <div class="form-group">
+            <label>День оплаты (1–31)</label>
+            <input type="number" id="cPayDay" min="1" max="31" placeholder="1" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Гос. номер</label>
+          <input type="text" id="cPlate" placeholder="01 A 123 BC" />
+        </div>
+        <div class="form-group">
+          <label>Примечание</label>
+          <input type="text" id="cNote" placeholder="Любая заметка..." />
+        </div>
+      </div>
+
       <div class="edit-footer">
         <button class="btn-ghost" id="editCancel">Отмена</button>
         <button class="btn-primary" id="editSave">Сохранить</button>
@@ -217,7 +360,7 @@
     <div class="sheet delete-sheet">
       <div class="sheet-handle"></div>
       <div class="delete-icon">🗑</div>
-      <div class="delete-title">Удалить номер?</div>
+      <div class="delete-title">Удалить запись?</div>
       <div class="delete-sub" id="deleteSub"></div>
       <div class="delete-footer">
         <button class="btn-ghost" id="deleteCancel">Отмена</button>
@@ -226,8 +369,22 @@
     </div>
   </div>
 
-
-  <!-- ⚠️ Firebase использует ES-модули — type="module" обязателен -->
-  <script type="module" src="app.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBjf9MmH-h_x1IlGSeJ-yGH_NXruW6fvzY",
+      authDomain: "nomer-a12fd.firebaseapp.com",
+      databaseURL: "https://nomer-a12fd-default-rtdb.firebaseio.com",
+      projectId: "nomer-a12fd",
+      storageBucket: "nomer-a12fd.firebasestorage.app",
+      messagingSenderId: "327818870146",
+      appId: "1:327818870146:web:51940997c21eee7377e39b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    window.db = firebase.database();
+  </script>
+  <script src="app.js"></script>
 </body>
 </html>
