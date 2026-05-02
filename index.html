@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIM Manager</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <!-- Fallback since SF Pro isn't on Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- PASSWORD LOCK SCREEN -->
+  <div class="lock-screen" id="lockScreen">
+    <div class="lock-card">
+      <div class="lock-icon">🔒</div>
+      <h1 class="lock-title">SIM Manager</h1>
+      <p class="lock-sub">Корпоративное управление номерами</p>
+      <div class="lock-input-wrap">
+        <input type="password" id="lockPassword" class="lock-input" placeholder="Введите пароль" autocomplete="off" />
+        <button class="lock-btn" id="lockBtn">Войти</button>
+      </div>
+      <p class="lock-error" id="lockError"></p>
+    </div>
+  </div>
+
+  <!-- APP (hidden until logged in) -->
+  <div class="app" id="app" style="display:none;">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-icon-wrap">
+            <span class="logo-icon">◈</span>
+          </div>
+          <div>
+            <div class="logo-title">SIM Manager</div>
+            <div class="logo-sub" id="headerDate"></div>
+          </div>
+        </div>
+
+        <div class="header-pills">
+          <div class="pill pill-neutral"><span id="countTotal">0</span> всего</div>
+          <div class="pill pill-warn" id="pillWarn" style="display:none"><span id="countWarning">0</span> ⚠ скоро</div>
+          <div class="pill pill-danger" id="pillDanger" style="display:none"><span id="countDanger">0</span> 🔴 срочно</div>
+        </div>
+
+        <button class="header-logout" id="btnLogout" title="Выйти">⎋ Выйти</button>
+      </div>
+    </header>
+
+    <!-- ALERT BANNER -->
+    <div class="alert-banner" id="alertBanner" style="display:none;">
+      <span>🔴</span>
+      <span id="alertText"></span>
+    </div>
+
+    <!-- MAIN -->
+    <main class="main">
+      <div class="section-header">
+        <h2 class="section-title">Корпоративные SIM-карты</h2>
+        <button class="btn-add-top" id="btnAddTop">
+          <span>+</span> Добавить номер
+        </button>
+      </div>
+
+      <div class="cards-grid" id="cardsGrid"></div>
+    </main>
+
+    <!-- FAB -->
+    <button class="fab" id="fabAdd">+</button>
+
+  </div><!-- /app -->
+
+
+  <!-- ═══ VIEW MODAL ═══ -->
+  <div class="overlay" id="viewOverlay">
+    <div class="sheet" id="viewSheet">
+      <div class="sheet-handle"></div>
+
+      <div class="view-header">
+        <div class="view-status-badge" id="vStatusBadge"></div>
+        <div class="view-number" id="vNumber"></div>
+        <div class="view-meta" id="vMeta"></div>
+        <div class="view-actions">
+          <button class="action-btn action-edit" id="vBtnEdit">✏️ Изменить</button>
+          <button class="action-btn action-delete" id="vBtnDelete">🗑 Удалить</button>
+          <button class="action-btn action-close" id="vBtnClose">✕</button>
+        </div>
+      </div>
+
+      <div class="view-countdown" id="vCountdown"></div>
+
+      <div class="view-fields" id="vFields"></div>
+
+      <div class="view-progress-section">
+        <div class="progress-labels">
+          <span>Цикл оплаты</span>
+          <span id="vProgressPct"></span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="vProgressFill"></div>
+        </div>
+      </div>
+
+      <div class="view-footer">
+        <button class="btn-paid" id="btnMarkPaid">✓ Отметить оплаченным</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══ EDIT / ADD MODAL ═══ -->
+  <div class="overlay" id="editOverlay">
+    <div class="sheet edit-sheet" id="editSheet">
+      <div class="sheet-handle"></div>
+      <div class="edit-title" id="editTitle">Добавить номер</div>
+
+      <div class="edit-form">
+        <div class="form-group">
+          <label>Номер телефона</label>
+          <input type="text" id="ePhone" placeholder="+998 90 123 45 67" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Компания</label>
+            <input type="text" id="eCompany" placeholder="ООО Ромашка" />
+          </div>
+          <div class="form-group">
+            <label>Оператор</label>
+            <select id="eOperator">
+              <option>Ucell</option>
+              <option>Beeline</option>
+              <option>Mobiuz</option>
+              <option>Humans</option>
+              <option>UMS</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>На чьё имя</label>
+          <input type="text" id="eOwner" placeholder="Иванов Иван Иванович" />
+        </div>
+        <div class="form-group">
+          <label>Адрес</label>
+          <input type="text" id="eAddress" placeholder="г. Ташкент, ул. Навои 1" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Тарифный план</label>
+            <input type="text" id="eTariff" placeholder="Бизнес Про" />
+          </div>
+          <div class="form-group">
+            <label>Интернет</label>
+            <input type="text" id="eInternet" placeholder="50 ГБ / мес" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Абонентская плата</label>
+            <input type="text" id="eAbFee" placeholder="95 000 сум" />
+          </div>
+          <div class="form-group">
+            <label>День оплаты (1–31)</label>
+            <input type="number" id="ePayDay" min="1" max="31" placeholder="5" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Доп. сумма / услуги</label>
+          <input type="text" id="eExtra" placeholder="—" />
+        </div>
+        <div class="form-group">
+          <label>Примечание</label>
+          <input type="text" id="eNote" placeholder="Любая заметка..." />
+        </div>
+      </div>
+
+      <div class="edit-footer">
+        <button class="btn-ghost" id="editCancel">Отмена</button>
+        <button class="btn-primary" id="editSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══ PASSWORD CONFIRM MODAL ═══ -->
+  <div class="overlay" id="pwOverlay">
+    <div class="sheet pw-sheet" id="pwSheet">
+      <div class="sheet-handle"></div>
+      <div class="pw-icon">🔐</div>
+      <div class="pw-title" id="pwTitle">Подтвердите действие</div>
+      <div class="pw-sub" id="pwSub">Введите пароль для продолжения</div>
+      <input type="password" id="pwInput" class="pw-input" placeholder="Пароль" autocomplete="off" />
+      <p class="pw-error" id="pwError"></p>
+      <div class="pw-footer">
+        <button class="btn-ghost" id="pwCancel">Отмена</button>
+        <button class="btn-primary" id="pwConfirm">Подтвердить</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══ DELETE CONFIRM MODAL ═══ -->
+  <div class="overlay" id="deleteOverlay">
+    <div class="sheet delete-sheet">
+      <div class="sheet-handle"></div>
+      <div class="delete-icon">🗑</div>
+      <div class="delete-title">Удалить номер?</div>
+      <div class="delete-sub" id="deleteSub"></div>
+      <div class="delete-footer">
+        <button class="btn-ghost" id="deleteCancel">Отмена</button>
+        <button class="btn-danger" id="deleteConfirm">Удалить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getDatabase, ref, set, get, child, update, remove, onValue } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBjf9MmH-h_x1IlGSeJ-yGH_NXruW6fvzY",
+      authDomain: "nomer-a12fd.firebaseapp.com",
+      databaseURL: "https://nomer-a12fd-default-rtdb.firebaseio.com",
+      projectId: "nomer-a12fd",
+      storageBucket: "nomer-a12fd.firebasestorage.app",
+      messagingSenderId: "327818870146",
+      appId: "1:327818870146:web:51940997c21eee7377e39b"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    
+    window.db = db;
+    window.ref = ref;
+    window.get = get;
+    window.child = child;
+    window.update = update;
+    window.remove = remove;
+    window.onValue = onValue;
+    window.set = set;
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
