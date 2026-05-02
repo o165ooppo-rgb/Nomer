@@ -6,8 +6,6 @@
   <title>SIM Manager</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <!-- Fallback since SF Pro isn't on Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet" />
 </head>
 <body>
@@ -16,7 +14,7 @@
   <div class="lock-screen" id="lockScreen">
     <div class="lock-card">
       <div class="lock-icon">🔒</div>
-      <h1 class="lock-title">Mone SIM-карты</h1>
+      <h1 class="lock-title">SIM Manager</h1>
       <p class="lock-sub">Корпоративное управление номерами</p>
       <div class="lock-input-wrap">
         <input type="password" id="lockPassword" class="lock-input" placeholder="Введите пароль" autocomplete="off" />
@@ -46,6 +44,17 @@
           <div class="pill pill-neutral"><span id="countTotal">0</span> всего</div>
           <div class="pill pill-warn" id="pillWarn" style="display:none"><span id="countWarning">0</span> ⚠ скоро</div>
           <div class="pill pill-danger" id="pillDanger" style="display:none"><span id="countDanger">0</span> 🔴 срочно</div>
+        </div>
+
+        <!-- Firebase sync indicator -->
+        <div id="syncIndicator" title="Синхронизация с Firebase" style="
+          display:flex;align-items:center;gap:6px;
+          font-size:12px;font-weight:500;color:#34c759;
+          background:rgba(52,199,89,0.1);border:1px solid rgba(52,199,89,0.25);
+          border-radius:100px;padding:4px 12px;white-space:nowrap;flex-shrink:0;
+        ">
+          <span style="width:7px;height:7px;border-radius:50%;background:#34c759;display:inline-block;animation:pill-pulse 2s ease-in-out infinite;"></span>
+          Firebase
         </div>
 
         <button class="header-logout" id="btnLogout" title="Выйти">⎋ Выйти</button>
@@ -217,33 +226,8 @@
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getDatabase, ref, set, get, child, update, remove, onValue } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
-    
-    const firebaseConfig = {
-      apiKey: "AIzaSyBjf9MmH-h_x1IlGSeJ-yGH_NXruW6fvzY",
-      authDomain: "nomer-a12fd.firebaseapp.com",
-      databaseURL: "https://nomer-a12fd-default-rtdb.firebaseio.com",
-      projectId: "nomer-a12fd",
-      storageBucket: "nomer-a12fd.firebasestorage.app",
-      messagingSenderId: "327818870146",
-      appId: "1:327818870146:web:51940997c21eee7377e39b"
-    };
-    
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    
-    window.db = db;
-    window.ref = ref;
-    window.get = get;
-    window.child = child;
-    window.update = update;
-    window.remove = remove;
-    window.onValue = onValue;
-    window.set = set;
-  </script>
-  <script src="app.js"></script>
+
+  <!-- ⚠️ Firebase использует ES-модули — type="module" обязателен -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
