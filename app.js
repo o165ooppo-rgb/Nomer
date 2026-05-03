@@ -2,6 +2,7 @@
  * Mone Manager — app.js
  * Three-category layout: Phones, Wi-Fi, Cars/GPS
  * Auth, CRUD, Firebase sync, payment tracking
+ * + Payment type filter: Наличные / Перечисление
  */
 
 // ─── CONSTANTS ───────────────────────────────────────────────
@@ -9,36 +10,16 @@ const APP_PASSWORD  = "admin123";
 const STORAGE_KEY   = "monemanager_v1";
 const SESSION_KEY   = "monemanager_session";
 
-// ─── DEMO DATA ───────────────────────────────────────────────
-const DEFAULT_DATA = {
-  phone: [
-    { id: "p1", cat:"phone", name:"+998 90 123 45 67", company:"ООО Альфа-Трейд",    operator:"Ucell",   owner:"Иванов Иван",      address:"г. Ташкент, ул. Навои 14",    tariff:"Бизнес Про",    internet:"50 ГБ/мес",  abFee:"95 000 сум",  payDay:5,  extra:"—",                    note:"Директор",          paidThisMonth:false },
-    { id: "p2", cat:"phone", name:"+998 93 234 56 78", company:"ИП Бета-Сервис",      operator:"Beeline", owner:"Петрова Анна",      address:"г. Ташкент, Амира Темура 7",  tariff:"Корп Стандарт", internet:"20 ГБ/мес",  abFee:"65 000 сум",  payDay:10, extra:"—",                    note:"Бухгалтерия",       paidThisMonth:false },
-    { id: "p3", cat:"phone", name:"+998 91 345 67 89", company:"ООО Гамма",           operator:"Mobiuz",  owner:"Сидоров Петр",      address:"г. Самарканд, ул. Регистан 3",tariff:"Корп Лайт",     internet:"10 ГБ/мес",  abFee:"45 000 сум",  payDay:15, extra:"10 000 сум (SMS)",      note:"Склад Самарканд",   paidThisMonth:false },
-    { id: "p4", cat:"phone", name:"+998 97 456 78 90", company:"ООО Дельта Логистик", operator:"Humans",  owner:"Юсупов Бобур",      address:"г. Ташкент, ТИИТ корп. 3",   tariff:"Бизнес Макс",   internet:"100 ГБ/мес", abFee:"140 000 сум", payDay:1,  extra:"—",                    note:"Генеральный директор", paidThisMonth:false },
-    { id: "p5", cat:"phone", name:"+998 94 567 89 01", company:"ООО Эпсилон",         operator:"UMS",     owner:"Каримова Зульфия",  address:"г. Ташкент, Чиланзар 9-кв.", tariff:"Корп Стандарт", internet:"20 ГБ/мес",  abFee:"65 000 сум",  payDay:20, extra:"—",                    note:"HR отдел",          paidThisMonth:false },
-    { id: "p6", cat:"phone", name:"+998 95 678 90 12", company:"ЧП Зета-Строй",       operator:"Ucell",   owner:"Рахимов Санжар",    address:"г. Бухара, ул. Гоголя 22",   tariff:"Бизнес Про",    internet:"50 ГБ/мес",  abFee:"95 000 сум",  payDay:25, extra:"5 000 сум (мин.)",     note:"Прораб Бухара",     paidThisMonth:false },
-  ],
-  wifi: [
-    { id: "w1", cat:"wifi", name:"Офис центральный", company:"ООО Альфа-Трейд",    provider:"Uztelecom",      tariff:"100 Мбит/с — Безлимит", address:"г. Ташкент, ул. Навои 14",    fee:"250 000 сум", payDay:5,  contract:"№ 56789", note:"Основной офис",     paidThisMonth:false },
-    { id: "w2", cat:"wifi", name:"Склад Самарканд",  company:"ООО Гамма",           provider:"Sarkor",         tariff:"50 Мбит/с — Безлимит",  address:"г. Самарканд, ул. Регистан 3",fee:"120 000 сум", payDay:15, contract:"№ 34521", note:"Склад",             paidThisMonth:false },
-    { id: "w3", cat:"wifi", name:"Офис Бухара",      company:"ЧП Зета-Строй",       provider:"Comnet",         tariff:"30 Мбит/с — 100 ГБ",    address:"г. Бухара, ул. Гоголя 22",   fee:"90 000 сум",  payDay:1,  contract:"№ 12300", note:"—",                 paidThisMonth:false },
-    { id: "w4", cat:"wifi", name:"Шоурум",           company:"ИП Мю-Дизайн",        provider:"Perfectum",      tariff:"200 Мбит/с — Безлимит", address:"г. Ташкент, ул. Беруни 12",  fee:"350 000 сум", payDay:22, contract:"№ 99001", note:"Дизайн и шоурум",   paidThisMonth:false },
-  ],
-  car: [
-    { id: "c1", cat:"car", name:"Chevrolet Nexia 3 — 01 ABC 123", company:"ООО Альфа-Трейд",    type:"GPS-трекер",    driver:"Мусаев Алишер",   provider:"Uzauto GPS",    fee:"80 000 сум",  payDay:1,  plate:"01 A 123 BC", note:"Доставка",        paidThisMonth:false },
-    { id: "c2", cat:"car", name:"Hyundai Tucson — 01 XYZ 789",    company:"ООО Дельта Логистик", type:"Страховка",     driver:"Юсупов Бобур",    provider:"Alfa Insurance",fee:"210 000 сум", payDay:10, plate:"01 X 789 YZ", note:"Директор",        paidThisMonth:false },
-    { id: "c3", cat:"car", name:"Isuzu NQR — 01 GRZ 555",         company:"ООО Гамма",           type:"GPS-трекер",    driver:"Хасанов Фаррух",  provider:"FleetTrack UZ", fee:"95 000 сум",  payDay:5,  plate:"01 G 555 RZ", note:"Грузовой склад",  paidThisMonth:false },
-    { id: "c4", cat:"car", name:"Chevrolet Cobalt — 01 MNO 321",  company:"ЧП Зета-Строй",       type:"Топливная карта",driver:"Рахимов Санжар",  provider:"Zaryadka Card", fee:"500 000 сум", payDay:25, plate:"01 M 321 NO", note:"Прораб, топливо", paidThisMonth:false },
-  ]
-};
+// ─── PAYMENT TYPE STATE ──────────────────────────────────────
+// 'cash' = Наличные, 'transfer' = Перечисление
+let activePayType = "cash";
 
 // ─── STATE ───────────────────────────────────────────────────
 let data = { phone: [], wifi: [], car: [] };
 let currentViewId  = null;
 let currentViewCat = null;
-let currentEditId  = null;   // null = new
-let currentEditCat = null;   // 'phone' | 'wifi' | 'car'
+let currentEditId  = null;
+let currentEditCat = null;
 let pendingAction  = null;
 let pendingDeleteId  = null;
 let pendingDeleteCat = null;
@@ -49,10 +30,14 @@ let fabOpen = false;
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    data = raw ? JSON.parse(raw) : deepClone(DEFAULT_DATA);
+    data = raw ? JSON.parse(raw) : { phone: [], wifi: [], car: [] };
   } catch {
-    data = deepClone(DEFAULT_DATA);
+    data = { phone: [], wifi: [], car: [] };
   }
+  data.phone = data.phone || [];
+  data.wifi  = data.wifi  || [];
+  data.car   = data.car   || [];
+
   // Reset paid flag on new month
   const savedMonth = localStorage.getItem("monemanager_month");
   const nowMonth = new Date().getMonth() + "-" + new Date().getFullYear();
@@ -92,6 +77,12 @@ function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
 
 function allItems() {
   return [...data.phone, ...data.wifi, ...data.car];
+}
+
+// Возвращает тип оплаты записи.
+// Если у записи нет поля payType — считается "cash" (Наличные)
+function getPayType(item) {
+  return item.payType || "cash";
 }
 
 function getItemByCat(cat, id) {
@@ -150,6 +141,17 @@ function getStatus(item) {
   return "ok";
 }
 
+// ─── PAYMENT TYPE TABS ───────────────────────────────────────
+function switchPayType(type) {
+  activePayType = type;
+
+  document.querySelectorAll(".pay-tab").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.type === type);
+  });
+
+  renderAll();
+}
+
 // ─── RENDER ALL ──────────────────────────────────────────────
 function renderAll() {
   updateHeaderDate();
@@ -166,7 +168,8 @@ function updateHeaderDate() {
 }
 
 function renderGlobalStats() {
-  const all = allItems();
+  // Статистика по всем записям текущего типа оплаты
+  const all = allItems().filter(i => getPayType(i) === activePayType);
   const warn   = all.filter(i => getStatus(i) === "warn").length;
   const danger = all.filter(i => getStatus(i) === "danger").length;
 
@@ -178,7 +181,7 @@ function renderGlobalStats() {
 }
 
 function renderBanner() {
-  const urgents = allItems().filter(i => getStatus(i) === "danger");
+  const urgents = allItems().filter(i => getPayType(i) === activePayType && getStatus(i) === "danger");
   const el = document.getElementById("alertBanner");
   const alertText = document.getElementById("alertText");
   if (urgents.length && el && alertText) {
@@ -190,13 +193,16 @@ function renderBanner() {
 }
 
 // ─── COLUMN RENDER ───────────────────────────────────────────
-const COL_IDS = { phone: "cardsPhone", wifi: "cardsWifi", car: "cardsCar" };
+const COL_IDS   = { phone: "cardsPhone", wifi: "cardsWifi", car: "cardsCar" };
 const STATS_IDS = { phone: "statsPhone", wifi: "statsWifi", car: "statsCar" };
 const CAT_LABELS = { phone: "📱 Телефон", wifi: "📶 Wi-Fi", car: "🚗 Машина / GPS" };
 const CAT_EMPTY  = { phone: "📱", wifi: "📶", car: "🚗" };
 
 function renderColumn(cat) {
-  const items = data[cat] || [];
+  // Фильтруем по активному типу оплаты
+  const allCatItems = data[cat] || [];
+  const items = allCatItems.filter(i => getPayType(i) === activePayType);
+
   const statsEl = document.getElementById(STATS_IDS[cat]);
   const cardsEl = document.getElementById(COL_IDS[cat]);
   if (!statsEl || !cardsEl) return;
@@ -218,7 +224,8 @@ function renderColumn(cat) {
   // Cards
   cardsEl.innerHTML = "";
   if (!items.length) {
-    cardsEl.innerHTML = `<div class="col-empty"><div class="col-empty-emoji">${CAT_EMPTY[cat]}</div><p>Нет записей. Нажмите «+ Добавить»</p></div>`;
+    const typeLabel = activePayType === "cash" ? "наличных" : "перечисления";
+    cardsEl.innerHTML = `<div class="col-empty"><div class="col-empty-emoji">${CAT_EMPTY[cat]}</div><p>Нет записей для ${typeLabel}.<br>Нажмите «+ Добавить»</p></div>`;
     return;
   }
 
@@ -242,7 +249,6 @@ function renderColumn(cat) {
     const dotClass  = st === "paid" ? "dot-paid"  : `dot-${st}`;
     const progClass = st === "paid" ? "prog-paid"  : `prog-${st}`;
 
-    // Secondary info per category
     let detailHtml = "";
     if (cat === "phone") {
       detailHtml = `<div class="card-detail"><span class="card-detail-icon">📶</span>${escapeHtml(item.operator)} · ${escapeHtml(item.internet || "—")}</div>`;
@@ -251,6 +257,11 @@ function renderColumn(cat) {
     } else if (cat === "car") {
       detailHtml = `<div class="card-detail"><span class="card-detail-icon">👤</span>${escapeHtml(item.driver || "—")} · ${escapeHtml(item.type || "—")}</div>`;
     }
+
+    // Бейдж типа оплаты на карточке
+    const payTypeBadge = getPayType(item) === "transfer"
+      ? `<span class="card-pay-type-badge badge-transfer">🏦 Перечисление</span>`
+      : `<span class="card-pay-type-badge badge-cash">💵 Наличные</span>`;
 
     const card = document.createElement("div");
     card.className = `item-card status-${st === "paid" ? "ok" : st}`;
@@ -298,7 +309,6 @@ function openViewModal(cat, id) {
   const days = daysUntilPayment(item);
   const prog = cycleProgress(item);
 
-  // Category badge
   const cb = document.getElementById("vCatBadge");
   if (cb) {
     const catMap  = { phone:"vcb-phone", wifi:"vcb-wifi", car:"vcb-car" };
@@ -306,7 +316,6 @@ function openViewModal(cat, id) {
     cb.textContent = CAT_LABELS[cat];
   }
 
-  // Status badge
   const sb = document.getElementById("vStatusBadge");
   const sbMap  = { ok:"vsb-ok", warn:"vsb-warn", danger:"vsb-danger", paid:"vsb-paid" };
   const sbText = { ok:`✓ В порядке (${days} дн.)`, warn:`⚠ Скоро (${days} дн.)`, danger:`🔴 СРОЧНО (${days} дн.)`, paid:"✓ Оплачено в этом месяце" };
@@ -315,12 +324,12 @@ function openViewModal(cat, id) {
   setText("vNumber", item.name);
   const metaEl = document.getElementById("vMeta");
   if (metaEl) {
-    if (cat === "phone") metaEl.textContent = `${item.company}  •  ${item.operator}`;
-    else if (cat === "wifi") metaEl.textContent = `${item.company}  •  ${item.provider}`;
-    else if (cat === "car")  metaEl.textContent = `${item.company}  •  ${item.plate || "—"}`;
+    const payLabel = getPayType(item) === "transfer" ? "🏦 Перечисление" : "💵 Наличные";
+    if (cat === "phone") metaEl.textContent = `${item.company}  •  ${item.operator}  •  ${payLabel}`;
+    else if (cat === "wifi") metaEl.textContent = `${item.company}  •  ${item.provider}  •  ${payLabel}`;
+    else if (cat === "car")  metaEl.textContent = `${item.company}  •  ${item.plate || "—"}  •  ${payLabel}`;
   }
 
-  // Countdown
   const cd = document.getElementById("vCountdown");
   if (cd) {
     if (st === "paid")      { cd.textContent = "✅ Оплата этого месяца отмечена"; cd.className = "view-countdown cd-paid"; }
@@ -330,7 +339,6 @@ function openViewModal(cat, id) {
     else                    { cd.textContent = `✅ До оплаты ${days} дн. — всё в порядке`; cd.className = "view-countdown cd-ok"; }
   }
 
-  // Fields by category
   let fields = [];
   if (cat === "phone") {
     fields = [
@@ -342,6 +350,7 @@ function openViewModal(cat, id) {
       { label:"💳 Абонентская плата", value: item.abFee },
       { label:"📅 День оплаты",       value: `${item.payDay}-е число` },
       { label:"💰 Доп. сумма",        value: item.extra || "—" },
+      { label:"💵 Тип оплаты",        value: getPayType(item) === "transfer" ? "🏦 Перечисление" : "💵 Наличные" },
       { label:"📍 Адрес",             value: item.address, wide: true },
       { label:"📝 Примечание",        value: item.note || "—", wide: true },
     ];
@@ -353,6 +362,7 @@ function openViewModal(cat, id) {
       { label:"💳 Ежемесячная плата", value: item.fee },
       { label:"📅 День оплаты",       value: `${item.payDay}-е число` },
       { label:"📄 Договор",           value: item.contract || "—" },
+      { label:"💵 Тип оплаты",        value: getPayType(item) === "transfer" ? "🏦 Перечисление" : "💵 Наличные" },
       { label:"📍 Адрес объекта",     value: item.address, wide: true },
       { label:"📝 Примечание",        value: item.note || "—", wide: true },
     ];
@@ -365,6 +375,7 @@ function openViewModal(cat, id) {
       { label:"📡 Провайдер / Страховщик", value: item.provider },
       { label:"💳 Ежемесячная плата", value: item.fee },
       { label:"📅 День оплаты",       value: `${item.payDay}-е число` },
+      { label:"💵 Тип оплаты",        value: getPayType(item) === "transfer" ? "🏦 Перечисление" : "💵 Наличные" },
       { label:"📝 Примечание",        value: item.note || "—", wide: true },
     ];
   }
@@ -379,25 +390,19 @@ function openViewModal(cat, id) {
     ).join("");
   }
 
-  // Progress
-  const fill = document.getElementById("vProgressFill");
-  const pct  = document.getElementById("vProgressPct");
-  if (fill) {
-    fill.style.width = prog + "%";
-    fill.style.background = st === "ok" || st === "paid" ? "var(--ok)" : st === "warn" ? "var(--warn)" : "var(--danger)";
+  const vProg = document.getElementById("vProgressFill");
+  const vPct  = document.getElementById("vProgressPct");
+  if (vProg) {
+    const progClass = st === "paid" ? "prog-paid" : `prog-${st}`;
+    vProg.className = `progress-fill ${progClass}`;
+    vProg.style.width = prog + "%";
   }
-  if (pct) pct.textContent = prog + "%";
+  if (vPct) vPct.textContent = prog + "%";
 
-  // Paid button
-  const paidBtn = document.getElementById("btnMarkPaid");
-  if (paidBtn) {
-    if (item.paidThisMonth) {
-      paidBtn.textContent = "✓ Уже оплачено в этом месяце";
-      paidBtn.classList.add("already-paid");
-    } else {
-      paidBtn.textContent = "✓ Отметить оплаченным";
-      paidBtn.classList.remove("already-paid");
-    }
+  const btnPaid = document.getElementById("btnMarkPaid");
+  if (btnPaid) {
+    btnPaid.disabled = item.paidThisMonth;
+    btnPaid.textContent = item.paidThisMonth ? "✓ Уже оплачено" : "✓ Отметить оплаченным";
   }
 
   openOverlay("viewOverlay");
@@ -449,7 +454,6 @@ function openEditModal(cat, id = null) {
     indicator.textContent = label.join(" ");
   }
 
-  // Show correct form
   document.getElementById("formPhone").style.display = cat === "phone" ? "" : "none";
   document.getElementById("formWifi").style.display  = cat === "wifi"  ? "" : "none";
   document.getElementById("formCar").style.display   = cat === "car"   ? "" : "none";
@@ -544,11 +548,13 @@ function saveEdit() {
   }
 
   if (currentEditId) {
+    // При редактировании — оставляем существующий payType
     const idx = data[cat].findIndex(i => i.id === currentEditId);
     if (idx !== -1) data[cat][idx] = { ...data[cat][idx], ...newData };
   } else {
+    // При добавлении — присваиваем текущий активный тип оплаты
     const newId = cat[0] + Date.now();
-    data[cat].push({ id: newId, cat, paidThisMonth: false, ...newData });
+    data[cat].push({ id: newId, cat, paidThisMonth: false, payType: activePayType, ...newData });
   }
 
   saveData();
@@ -626,7 +632,8 @@ function confirmPassword() {
 // ─── START ADD ───────────────────────────────────────────────
 function startAdd(cat) {
   pendingAction = { type:"add", id:null, cat };
-  openPasswordConfirm("Добавить запись", `Введите пароль для добавления в категорию «${CAT_LABELS[cat]}».`);
+  const typeLabel = activePayType === "cash" ? "Наличные" : "Перечисление";
+  openPasswordConfirm("Добавить запись", `Введите пароль для добавления в «${typeLabel}» → «${CAT_LABELS[cat]}».`);
 }
 
 // ─── OVERLAY HELPERS ─────────────────────────────────────────
@@ -692,6 +699,13 @@ document.querySelectorAll(".btn-col-add").forEach(btn => {
   btn.addEventListener("click", () => {
     const cat = btn.dataset.cat;
     if (cat) startAdd(cat);
+  });
+});
+
+// Payment type tabs
+document.querySelectorAll(".pay-tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    switchPayType(btn.dataset.type);
   });
 });
 
