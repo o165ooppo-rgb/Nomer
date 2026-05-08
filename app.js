@@ -1249,80 +1249,117 @@ function toggleFab() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SIDEBAR — PROFESSIONAL MOBILE BEHAVIOR
+// ▓▓▓▓▓  S I D E B A R   —   B U I L T   F R O M   S C R A T C H  ▓▓▓▓▓
+// Two distinct behaviors:
+// • Desktop (≥ 901px): sidebar always visible, no JS needed for show/hide.
+// • Mobile  (≤ 900px): hamburger button toggles sidebar. Uses .is-open class.
+// State is mirrored on body, sidebar, and overlay with simple class flags.
 // ═══════════════════════════════════════════════════════════
 
-function initSidebar() {
-  const toggle  = document.getElementById("sidebarToggle");
-  const closeBtn = document.getElementById("sidebarCloseBtn");
-  const sidebar = document.getElementById("sidebar");
+const MOBILE_BREAKPOINT = 900;
 
-  // Create overlay
+function isMobileViewport() {
+  return window.innerWidth <= MOBILE_BREAKPOINT;
+}
+
+function ensureSidebarOverlay() {
   let overlay = document.querySelector(".sidebar-overlay");
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.className = "sidebar-overlay";
+    overlay.id = "sidebarOverlay";
     document.body.appendChild(overlay);
   }
+  return overlay;
+}
 
-  toggle?.addEventListener("click", e => {
-    e.stopPropagation();
-    openSidebarMobile();
-  });
+function openSidebarMobile() {
+  if (!isMobileViewport()) return;  // Never run on desktop
+  const sidebar = document.getElementById("sidebar");
+  const overlay = ensureSidebarOverlay();
+  if (!sidebar) return;
+  sidebar.classList.add("is-open");
+  overlay.classList.add("is-visible");
+  document.body.classList.add("sidebar-locked");
+}
 
-  closeBtn?.addEventListener("click", e => {
-    e.stopPropagation();
+function closeSidebarMobile() {
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.querySelector(".sidebar-overlay");
+  if (sidebar) sidebar.classList.remove("is-open");
+  if (overlay) overlay.classList.remove("is-visible");
+  document.body.classList.remove("sidebar-locked");
+}
+
+function isSidebarOpenMobile() {
+  const sidebar = document.getElementById("sidebar");
+  return !!(sidebar && sidebar.classList.contains("is-open"));
+}
+
+function initSidebar() {
+  const toggle  = document.getElementById("sidebarToggle");
+  const closeBtn = document.getElementById("sidebarCloseBtn");
+  const overlay = ensureSidebarOverlay();
+
+  // ─── Hamburger button → open ───────────────────────────────
+  if (toggle) {
+    toggle.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openSidebarMobile();
+    });
+  }
+
+  // ─── ✕ button inside sidebar → close ───────────────────────
+  if (closeBtn) {
+    closeBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeSidebarMobile();
+    });
+  }
+
+  // ─── Click on dark overlay → close ─────────────────────────
+  overlay.addEventListener("click", function (e) {
+    e.preventDefault();
     closeSidebarMobile();
   });
 
-  overlay.addEventListener("click", () => closeSidebarMobile());
-
-  // Close on ESC
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && sidebar?.classList.contains("open")) {
+  // ─── ESC key → close ───────────────────────────────────────
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && isSidebarOpenMobile()) {
       closeSidebarMobile();
     }
   });
 
-  // Sidebar manage buttons (manager-only)
-  document.querySelectorAll('.sidebar-nav-item[data-action]').forEach(btn => {
+  // ─── Manager-only actions ──────────────────────────────────
+  document.querySelectorAll('.sidebar-nav-item[data-action]').forEach(function (btn) {
     const action = btn.dataset.action;
     if (action === "manage-users") {
-      btn.addEventListener("click", () => { openUsersModal(); closeSidebarMobile(); });
+      btn.addEventListener("click", function () { closeSidebarMobile(); openUsersModal(); });
     } else if (action === "manage-categories") {
-      btn.addEventListener("click", () => { openCategoriesModal(); closeSidebarMobile(); });
+      btn.addEventListener("click", function () { closeSidebarMobile(); openCategoriesModal(); });
     } else if (action === "manage-credentials") {
-      btn.addEventListener("click", () => { openCredsModal(); closeSidebarMobile(); });
+      btn.addEventListener("click", function () { closeSidebarMobile(); openCredsModal(); });
     }
   });
 
-  // Resize listener — close sidebar if going to desktop
-  let resizeTimer;
-  window.addEventListener("resize", () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      if (window.innerWidth >= 900) {
+  // ─── On resize: if we cross to desktop, force-clean state ──
+  let resizeTimer = null;
+  window.addEventListener("resize", function () {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      if (!isMobileViewport()) {
+        // Going to desktop: make sure no leftover mobile state remains
         closeSidebarMobile();
       }
-    }, 100);
+    }, 120);
   });
-}
 
-function openSidebarMobile() {
-  const sidebar = document.getElementById("sidebar");
-  const overlay = document.querySelector(".sidebar-overlay");
-  if (!sidebar) return;
-  sidebar.classList.add("open");
-  overlay?.classList.add("visible");
-  document.body.classList.add("sidebar-locked");
-}
-function closeSidebarMobile() {
-  const sidebar = document.getElementById("sidebar");
-  const overlay = document.querySelector(".sidebar-overlay");
-  if (!sidebar) return;
-  sidebar.classList.remove("open");
-  overlay?.classList.remove("visible");
-  document.body.classList.remove("sidebar-locked");
+  // ─── Orientation change (mobile pivot) ─────────────────────
+  window.addEventListener("orientationchange", function () {
+    setTimeout(closeSidebarMobile, 200);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
