@@ -1,46 +1,67 @@
 /**
- * Mone Manager — app.js
- * Three-category layout: Phones, Wi-Fi, Cars/GPS
- * Auth, CRUD, Firebase sync, payment tracking
- * + Payment type filter: Наличные / Перечисление
+ * Mone Manager — app.js v2
+ * + Collapsible categories
+ * + Sidebar with export/logout
+ * + Role-based auth: manager (editor) / employee (read-only)
+ * + Staff management (manager creates employee logins)
+ * + Excel report export
  */
 
 // ─── CONSTANTS ───────────────────────────────────────────────
-const APP_PASSWORD  = "admin123";
-const STORAGE_KEY   = "monemanager_v1";
-const SESSION_KEY   = "monemanager_session";
-
-// ─── PAYMENT TYPE STATE ──────────────────────────────────────
-// 'cash' = Наличные, 'transfer' = Перечисление
-let activePayType = "cash";
+const MANAGER_LOGIN    = "admin";
+const MANAGER_PASSWORD = "admin123";
+const STORAGE_KEY      = "monemanager_v1";
+const SESSION_KEY      = "monemanager_session";
+const EMPLOYEES_KEY    = "monemanager_employees";
+const COLLAPSED_KEY    = "monemanager_collapsed";
 
 // ─── STATE ───────────────────────────────────────────────────
-let data = { phone: [], wifi: [], car: [] };
-let currentViewId  = null;
-let currentViewCat = null;
-let currentEditId  = null;
-let currentEditCat = null;
-let pendingAction  = null;
+let data            = { phone: [], wifi: [], car: [] };
+let activePayType   = "cash";
+let currentViewId   = null;
+let currentViewCat  = null;
+let currentEditId   = null;
+let currentEditCat  = null;
+let pendingAction   = null;
 let pendingDeleteId  = null;
 let pendingDeleteCat = null;
-let firebaseReady  = false;
-let fabOpen = false;
+let firebaseReady   = false;
+let fabOpen         = false;
+let currentRole     = null; // 'manager' | 'employee'
+let currentUserName = "";
+let collapsedCats   = {};   // { phone: true/false, wifi: true/false, car: true/false }
+let selectedRole    = "manager";
+
+// ─── EMPLOYEES (stored in localStorage) ──────────────────────
+function loadEmployees() {
+  try { return JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || []; }
+  catch { return []; }
+}
+function saveEmployees(list) {
+  localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(list));
+}
+
+// ─── COLLAPSED STATE ─────────────────────────────────────────
+function loadCollapsed() {
+  try { collapsedCats = JSON.parse(localStorage.getItem(COLLAPSED_KEY)) || {}; }
+  catch { collapsedCats = {}; }
+}
+function saveCollapsed() {
+  localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsedCats));
+}
 
 // ─── STORAGE ─────────────────────────────────────────────────
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     data = raw ? JSON.parse(raw) : { phone: [], wifi: [], car: [] };
-  } catch {
-    data = { phone: [], wifi: [], car: [] };
-  }
+  } catch { data = { phone: [], wifi: [], car: [] }; }
   data.phone = data.phone || [];
   data.wifi  = data.wifi  || [];
   data.car   = data.car   || [];
 
-  // Reset paid flag on new month
   const savedMonth = localStorage.getItem("monemanager_month");
-  const nowMonth = new Date().getMonth() + "-" + new Date().getFullYear();
+  const nowMonth   = new Date().getMonth() + "-" + new Date().getFullYear();
   if (savedMonth !== nowMonth) {
     allItems().forEach(item => item.paidThisMonth = false);
     localStorage.setItem("monemanager_month", nowMonth);
@@ -73,29 +94,27 @@ function loadFromFirebase() {
   }).catch(e => { console.error("Firebase load error:", e); loadData(); renderAll(); });
 }
 
-function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
-
-function allItems() {
-  return [...data.phone, ...data.wifi, ...data.car];
-}
-
-// Возвращает тип оплаты записи.
-// Если у записи нет поля payType — считается "cash" (Наличные)
-function getPayType(item) {
-  return item.payType || "cash";
-}
-
-function getItemByCat(cat, id) {
-  return data[cat].find(i => i.id === id);
-}
+function allItems() { return [...data.phone, ...data.wifi, ...data.car]; }
+function getPayType(item) { return item.payType || "cash"; }
+function getItemByCat(cat, id) { return data[cat].find(i => i.id === id); }
 
 // ─── SESSION ─────────────────────────────────────────────────
-function isLoggedIn() { return sessionStorage.getItem(SESSION_KEY) === "1"; }
+function isLoggedIn() {
+  const s = sessionStorage.getItem(SESSION_KEY);
+  return !!s;
+}
+function getSessionData() {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || null; }
+  catch { return null; }
+}
 
-function login() {
-  sessionStorage.setItem(SESSION_KEY, "1");
+function login(role, name) {
+  currentRole     = role;
+  currentUserName = name;
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ role, name }));
   document.getElementById("lockScreen").style.display = "none";
-  document.getElementById("app").style.display = "block";
+  document.getElementById("app").style.display = "flex";
+  applyRoleUI();
   if (window.db) {
     window.db.ref('monemanager').on('value', snapshot => {
       const fbData = snapshot.val();
@@ -110,9 +129,41 @@ function login() {
     });
   }
   renderAll();
+  applyCollapsed();
 }
 
 function logout() { sessionStorage.removeItem(SESSION_KEY); location.reload(); }
+
+function applyRoleUI() {
+  if (currentRole === "employee") {
+    document.body.classList.add("role-employee");
+  } else {
+    document.body.classList.remove("role-employee");
+  }
+
+  // Header role badge
+  const badge = document.getElementById("headerRoleBadge");
+  if (badge) {
+    badge.className = `header-role-badge role-${currentRole}`;
+    badge.textContent = currentRole === "manager" ? "👔 Менеджер" : "👤 Сотрудник";
+  }
+
+  // Sidebar user
+  const sucName = document.getElementById("sucName");
+  const sucRole = document.getElementById("sucRole");
+  const sucAvatar = document.getElementById("sucAvatar");
+  if (sucName) sucName.textContent = currentUserName;
+  if (sucRole) sucRole.textContent = currentRole === "manager" ? "Администратор" : "Сотрудник";
+  if (sucAvatar) sucAvatar.textContent = (currentUserName || "?")[0].toUpperCase();
+
+  // Manager section visibility
+  const managerSection = document.getElementById("sidebarManagerSection");
+  if (managerSection) managerSection.style.display = currentRole === "manager" ? "" : "none";
+
+  // Fab
+  const fabWrap = document.getElementById("fabWrap");
+  if (fabWrap) fabWrap.style.display = currentRole === "manager" ? "" : "none";
+}
 
 // ─── DATE UTILS ──────────────────────────────────────────────
 function now() { return new Date(); }
@@ -144,11 +195,9 @@ function getStatus(item) {
 // ─── PAYMENT TYPE TABS ───────────────────────────────────────
 function switchPayType(type) {
   activePayType = type;
-
   document.querySelectorAll(".pay-tab").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.type === type);
   });
-
   renderAll();
 }
 
@@ -160,6 +209,7 @@ function renderAll() {
   renderColumn("phone");
   renderColumn("wifi");
   renderColumn("car");
+  updateSidebarBadges();
 }
 
 function updateHeaderDate() {
@@ -168,11 +218,9 @@ function updateHeaderDate() {
 }
 
 function renderGlobalStats() {
-  // Статистика по всем записям текущего типа оплаты
-  const all = allItems().filter(i => getPayType(i) === activePayType);
+  const all    = allItems().filter(i => getPayType(i) === activePayType);
   const warn   = all.filter(i => getStatus(i) === "warn").length;
   const danger = all.filter(i => getStatus(i) === "danger").length;
-
   setText("countTotal",   all.length);
   setText("countWarning", warn);
   setText("countDanger",  danger);
@@ -192,6 +240,15 @@ function renderBanner() {
   }
 }
 
+function updateSidebarBadges() {
+  const cats = ["phone", "wifi", "car"];
+  cats.forEach(cat => {
+    const items = (data[cat] || []).filter(i => getPayType(i) === activePayType);
+    const el = document.getElementById(`snavBadge${cat.charAt(0).toUpperCase() + cat.slice(1)}`);
+    if (el) el.textContent = items.length;
+  });
+}
+
 // ─── COLUMN RENDER ───────────────────────────────────────────
 const COL_IDS   = { phone: "cardsPhone", wifi: "cardsWifi", car: "cardsCar" };
 const STATS_IDS = { phone: "statsPhone", wifi: "statsWifi", car: "statsCar" };
@@ -199,7 +256,6 @@ const CAT_LABELS = { phone: "📱 Телефон", wifi: "📶 Wi-Fi", car: "�
 const CAT_EMPTY  = { phone: "📱", wifi: "📶", car: "🚗" };
 
 function renderColumn(cat) {
-  // Фильтруем по активному типу оплаты
   const allCatItems = data[cat] || [];
   const items = allCatItems.filter(i => getPayType(i) === activePayType);
 
@@ -207,7 +263,6 @@ function renderColumn(cat) {
   const cardsEl = document.getElementById(COL_IDS[cat]);
   if (!statsEl || !cardsEl) return;
 
-  // Stats chips
   const total  = items.length;
   const ok     = items.filter(i => getStatus(i) === "ok").length;
   const warn   = items.filter(i => getStatus(i) === "warn").length;
@@ -221,11 +276,10 @@ function renderColumn(cat) {
   if (paid)   statsHtml += `<span class="col-stat-chip chip-paid">✓ ${paid} опл.</span>`;
   statsEl.innerHTML = statsHtml;
 
-  // Cards
   cardsEl.innerHTML = "";
   if (!items.length) {
     const typeLabel = activePayType === "cash" ? "наличных" : "перечисления";
-    cardsEl.innerHTML = `<div class="col-empty"><div class="col-empty-emoji">${CAT_EMPTY[cat]}</div><p>Нет записей для ${typeLabel}.<br>Нажмите «+ Добавить»</p></div>`;
+    cardsEl.innerHTML = `<div class="col-empty"><div class="col-empty-emoji">${CAT_EMPTY[cat]}</div><p>Нет записей для ${typeLabel}.<br>${currentRole === "manager" ? 'Нажмите «+ Добавить»' : ''}</p></div>`;
     return;
   }
 
@@ -240,28 +294,19 @@ function renderColumn(cat) {
     const progress = cycleProgress(item);
 
     let badgeText, badgeClass;
-    if (st === "paid")  { badgeText = "✓ Оплачено";           badgeClass = "badge-paid"; }
-    else if (days === 0){ badgeText = "Сегодня!";             badgeClass = "badge-danger"; }
-    else if (days <= 3) { badgeText = `${days} дн. — СРОЧНО`; badgeClass = "badge-danger"; }
-    else if (days <= 7) { badgeText = `${days} дн.`;          badgeClass = "badge-warn"; }
-    else                { badgeText = `${days} дн.`;          badgeClass = "badge-ok"; }
+    if (st === "paid")   { badgeText = "✓ Оплачено";           badgeClass = "badge-paid"; }
+    else if (days === 0) { badgeText = "Сегодня!";             badgeClass = "badge-danger"; }
+    else if (days <= 3)  { badgeText = `${days} дн. — СРОЧНО`; badgeClass = "badge-danger"; }
+    else if (days <= 7)  { badgeText = `${days} дн.`;          badgeClass = "badge-warn"; }
+    else                 { badgeText = `${days} дн.`;          badgeClass = "badge-ok"; }
 
-    const dotClass  = st === "paid" ? "dot-paid"  : `dot-${st}`;
-    const progClass = st === "paid" ? "prog-paid"  : `prog-${st}`;
+    const dotClass  = st === "paid" ? "dot-paid" : `dot-${st}`;
+    const progClass = st === "paid" ? "prog-paid" : `prog-${st}`;
 
     let detailHtml = "";
-    if (cat === "phone") {
-      detailHtml = `<div class="card-detail"><span class="card-detail-icon">📶</span>${escapeHtml(item.operator)} · ${escapeHtml(item.internet || "—")}</div>`;
-    } else if (cat === "wifi") {
-      detailHtml = `<div class="card-detail"><span class="card-detail-icon">🏢</span>${escapeHtml(item.provider)} · ${escapeHtml(item.tariff || "—")}</div>`;
-    } else if (cat === "car") {
-      detailHtml = `<div class="card-detail"><span class="card-detail-icon">👤</span>${escapeHtml(item.driver || "—")} · ${escapeHtml(item.type || "—")}</div>`;
-    }
-
-    // Бейдж типа оплаты на карточке
-    const payTypeBadge = getPayType(item) === "transfer"
-      ? `<span class="card-pay-type-badge badge-transfer">🏦 Перечисление</span>`
-      : `<span class="card-pay-type-badge badge-cash">💵 Наличные</span>`;
+    if (cat === "phone")      detailHtml = `<div class="card-detail"><span class="card-detail-icon">📶</span>${escapeHtml(item.operator)} · ${escapeHtml(item.internet || "—")}</div>`;
+    else if (cat === "wifi")  detailHtml = `<div class="card-detail"><span class="card-detail-icon">🏢</span>${escapeHtml(item.provider)} · ${escapeHtml(item.tariff || "—")}</div>`;
+    else if (cat === "car")   detailHtml = `<div class="card-detail"><span class="card-detail-icon">👤</span>${escapeHtml(item.driver || "—")} · ${escapeHtml(item.type || "—")}</div>`;
 
     const card = document.createElement("div");
     card.className = `item-card status-${st === "paid" ? "ok" : st}`;
@@ -289,13 +334,88 @@ function renderColumn(cat) {
   });
 }
 
-function getFee(item) {
-  return item.abFee || item.fee || "—";
-}
+function getFee(item) { return item.abFee || item.fee || "—"; }
 
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;');
+}
+
+// ─── COLLAPSIBLE CATEGORIES ───────────────────────────────────
+function initCollapsible() {
+  loadCollapsed();
+  const cats = ["phone", "wifi", "car"];
+  cats.forEach(cat => {
+    const colId  = { phone:"colPhones", wifi:"colWifi", car:"colCars" }[cat];
+    const bodyId = `colBody${cat.charAt(0).toUpperCase() + cat.slice(1)}`;
+    const col    = document.getElementById(colId);
+    const body   = document.getElementById(bodyId);
+    if (!col || !body) return;
+
+    const btn = col.querySelector(`.col-toggle-btn[data-cat="${cat}"]`);
+    const header = col.querySelector(".col-header");
+
+    // Apply saved state
+    if (collapsedCats[cat]) {
+      body.classList.add("collapsed");
+      if (btn) btn.classList.add("collapsed");
+      col.classList.add("is-collapsed");
+    }
+
+    // Click on toggle button
+    if (btn) {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleCategory(cat, col, body, btn);
+      });
+    }
+
+    // Click on header row (but not on the add button)
+    if (header) {
+      header.addEventListener("click", (e) => {
+        if (e.target.closest(".btn-col-add")) return;
+        if (e.target.closest(".col-toggle-btn")) return;
+        toggleCategory(cat, col, body, btn);
+      });
+    }
+  });
+}
+
+function toggleCategory(cat, col, body, btn) {
+  const isCollapsed = body.classList.contains("collapsed");
+  if (isCollapsed) {
+    body.classList.remove("collapsed");
+    if (btn) btn.classList.remove("collapsed");
+    col.classList.remove("is-collapsed");
+    collapsedCats[cat] = false;
+  } else {
+    body.classList.add("collapsed");
+    if (btn) btn.classList.add("collapsed");
+    col.classList.add("is-collapsed");
+    collapsedCats[cat] = true;
+  }
+  saveCollapsed();
+}
+
+function applyCollapsed() {
+  const cats = ["phone", "wifi", "car"];
+  cats.forEach(cat => {
+    const colId  = { phone:"colPhones", wifi:"colWifi", car:"colCars" }[cat];
+    const bodyId = `colBody${cat.charAt(0).toUpperCase() + cat.slice(1)}`;
+    const col    = document.getElementById(colId);
+    const body   = document.getElementById(bodyId);
+    if (!col || !body) return;
+    const btn = col.querySelector(`.col-toggle-btn[data-cat="${cat}"]`);
+    if (collapsedCats[cat]) {
+      body.classList.add("collapsed");
+      if (btn) btn.classList.add("collapsed");
+      col.classList.add("is-collapsed");
+    } else {
+      body.classList.remove("collapsed");
+      if (btn) btn.classList.remove("collapsed");
+      col.classList.remove("is-collapsed");
+    }
+  });
 }
 
 // ─── VIEW MODAL ──────────────────────────────────────────────
@@ -311,8 +431,8 @@ function openViewModal(cat, id) {
 
   const cb = document.getElementById("vCatBadge");
   if (cb) {
-    const catMap  = { phone:"vcb-phone", wifi:"vcb-wifi", car:"vcb-car" };
-    cb.className  = `view-cat-badge ${catMap[cat]}`;
+    const catMap = { phone:"vcb-phone", wifi:"vcb-wifi", car:"vcb-car" };
+    cb.className = `view-cat-badge ${catMap[cat]}`;
     cb.textContent = CAT_LABELS[cat];
   }
 
@@ -325,7 +445,7 @@ function openViewModal(cat, id) {
   const metaEl = document.getElementById("vMeta");
   if (metaEl) {
     const payLabel = getPayType(item) === "transfer" ? "🏦 Перечисление" : "💵 Наличные";
-    if (cat === "phone") metaEl.textContent = `${item.company}  •  ${item.operator}  •  ${payLabel}`;
+    if (cat === "phone")     metaEl.textContent = `${item.company}  •  ${item.operator}  •  ${payLabel}`;
     else if (cat === "wifi") metaEl.textContent = `${item.company}  •  ${item.provider}  •  ${payLabel}`;
     else if (cat === "car")  metaEl.textContent = `${item.company}  •  ${item.plate || "—"}  •  ${payLabel}`;
   }
@@ -434,6 +554,7 @@ function executePaid(cat, id) {
 
 // ─── EDIT ────────────────────────────────────────────────────
 function startEdit(cat, id) {
+  if (currentRole !== "manager") return;
   const item = getItemByCat(cat, id);
   pendingAction = { type:"edit", id, cat };
   openPasswordConfirm("Редактировать", `Редактировать «${item ? item.name : ""}»?`);
@@ -502,57 +623,23 @@ function saveEdit() {
   let newData = {};
 
   if (cat === "phone") {
-    const name    = getVal("ePhone").trim();
-    const company = getVal("eCompany").trim();
+    const name = getVal("ePhone").trim(), company = getVal("eCompany").trim();
     if (!name || !company) { alert("Заполните номер телефона и компанию."); return; }
-    newData = {
-      name, company,
-      owner:    getVal("eOwner").trim(),
-      address:  getVal("eAddress").trim(),
-      tariff:   getVal("eTariff").trim(),
-      internet: getVal("eInternet").trim(),
-      abFee:    getVal("eAbFee").trim(),
-      payDay:   parseInt(getVal("ePayDay")) || 1,
-      extra:    getVal("eExtra").trim() || "—",
-      operator: getVal("eOperator"),
-      note:     getVal("eNote").trim(),
-    };
+    newData = { name, company, owner: getVal("eOwner").trim(), address: getVal("eAddress").trim(), tariff: getVal("eTariff").trim(), internet: getVal("eInternet").trim(), abFee: getVal("eAbFee").trim(), payDay: parseInt(getVal("ePayDay")) || 1, extra: getVal("eExtra").trim() || "—", operator: getVal("eOperator"), note: getVal("eNote").trim() };
   } else if (cat === "wifi") {
-    const name    = getVal("wName").trim();
-    const company = getVal("wCompany").trim();
+    const name = getVal("wName").trim(), company = getVal("wCompany").trim();
     if (!name || !company) { alert("Заполните название и компанию."); return; }
-    newData = {
-      name, company,
-      provider: getVal("wProvider"),
-      tariff:   getVal("wTariff").trim(),
-      address:  getVal("wAddress").trim(),
-      fee:      getVal("wFee").trim(),
-      payDay:   parseInt(getVal("wPayDay")) || 1,
-      contract: getVal("wContract").trim(),
-      note:     getVal("wNote").trim(),
-    };
+    newData = { name, company, provider: getVal("wProvider"), tariff: getVal("wTariff").trim(), address: getVal("wAddress").trim(), fee: getVal("wFee").trim(), payDay: parseInt(getVal("wPayDay")) || 1, contract: getVal("wContract").trim(), note: getVal("wNote").trim() };
   } else if (cat === "car") {
-    const name    = getVal("cName").trim();
-    const company = getVal("cCompany").trim();
+    const name = getVal("cName").trim(), company = getVal("cCompany").trim();
     if (!name || !company) { alert("Заполните название автомобиля и компанию."); return; }
-    newData = {
-      name, company,
-      type:     getVal("cType"),
-      driver:   getVal("cDriver").trim(),
-      provider: getVal("cProvider").trim(),
-      fee:      getVal("cFee").trim(),
-      payDay:   parseInt(getVal("cPayDay")) || 1,
-      plate:    getVal("cPlate").trim(),
-      note:     getVal("cNote").trim(),
-    };
+    newData = { name, company, type: getVal("cType"), driver: getVal("cDriver").trim(), provider: getVal("cProvider").trim(), fee: getVal("cFee").trim(), payDay: parseInt(getVal("cPayDay")) || 1, plate: getVal("cPlate").trim(), note: getVal("cNote").trim() };
   }
 
   if (currentEditId) {
-    // При редактировании — оставляем существующий payType
     const idx = data[cat].findIndex(i => i.id === currentEditId);
     if (idx !== -1) data[cat][idx] = { ...data[cat][idx], ...newData };
   } else {
-    // При добавлении — присваиваем текущий активный тип оплаты
     const newId = cat[0] + Date.now();
     data[cat].push({ id: newId, cat, paidThisMonth: false, payType: activePayType, ...newData });
   }
@@ -564,6 +651,7 @@ function saveEdit() {
 
 // ─── DELETE ──────────────────────────────────────────────────
 function startDelete(cat, id) {
+  if (currentRole !== "manager") return;
   const item = getItemByCat(cat, id);
   pendingAction = { type:"delete", id, cat };
   openPasswordConfirm("Удалить запись", `Удалить «${item ? item.name : ""}»?`);
@@ -598,7 +686,7 @@ function openPasswordConfirm(title, sub) {
 
 function confirmPassword() {
   const val = getVal("pwInput");
-  if (val !== APP_PASSWORD) {
+  if (val !== MANAGER_PASSWORD) {
     setTxt("pwError", "Неверный пароль. Попробуйте снова.");
     const pwInput = document.getElementById("pwInput");
     if (pwInput) {
@@ -616,21 +704,15 @@ function confirmPassword() {
   const { type, id, cat } = pendingAction;
   pendingAction = null;
 
-  if (type === "edit") {
-    closeViewModal();
-    setTimeout(() => openEditModal(cat, id), 200);
-  } else if (type === "delete") {
-    openDeleteConfirm(cat, id);
-  } else if (type === "paid") {
-    executePaid(cat, id);
-  } else if (type === "add") {
-    closeViewModal();
-    setTimeout(() => openEditModal(cat, null), 200);
-  }
+  if (type === "edit")   { closeViewModal(); setTimeout(() => openEditModal(cat, id), 200); }
+  else if (type === "delete") { openDeleteConfirm(cat, id); }
+  else if (type === "paid")   { executePaid(cat, id); }
+  else if (type === "add")    { closeViewModal(); setTimeout(() => openEditModal(cat, null), 200); }
 }
 
 // ─── START ADD ───────────────────────────────────────────────
 function startAdd(cat) {
+  if (currentRole !== "manager") return;
   pendingAction = { type:"add", id:null, cat };
   const typeLabel = activePayType === "cash" ? "Наличные" : "Перечисление";
   openPasswordConfirm("Добавить запись", `Введите пароль для добавления в «${typeLabel}» → «${CAT_LABELS[cat]}».`);
@@ -639,7 +721,7 @@ function startAdd(cat) {
 // ─── OVERLAY HELPERS ─────────────────────────────────────────
 function openOverlay(id)  { const el = document.getElementById(id); if (el) el.classList.add("open"); }
 function closeOverlay(id) { const el = document.getElementById(id); if (el) el.classList.remove("open"); }
-function closeAllModals() { ["viewOverlay","editOverlay","pwOverlay","deleteOverlay"].forEach(closeOverlay); }
+function closeAllModals() { ["viewOverlay","editOverlay","pwOverlay","deleteOverlay","usersOverlay"].forEach(closeOverlay); }
 
 // ─── DOM HELPERS ─────────────────────────────────────────────
 function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
@@ -651,52 +733,295 @@ function show(id, visible) { const el = document.getElementById(id); if (el) el.
 // ─── FAB TOGGLE ──────────────────────────────────────────────
 function toggleFab() {
   fabOpen = !fabOpen;
-  document.querySelector(".fab-wrap").classList.toggle("open", fabOpen);
+  const fw = document.querySelector(".fab-wrap");
+  if (fw) fw.classList.toggle("open", fabOpen);
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────
+function initSidebar() {
+  const toggle   = document.getElementById("sidebarToggle");
+  const sidebar  = document.getElementById("sidebar");
+
+  // Create overlay for mobile
+  const overlay = document.createElement("div");
+  overlay.className = "sidebar-overlay";
+  document.body.appendChild(overlay);
+
+  toggle?.addEventListener("click", () => {
+    sidebar?.classList.toggle("open");
+    overlay.classList.toggle("visible");
+  });
+  overlay.addEventListener("click", () => {
+    sidebar?.classList.remove("open");
+    overlay.classList.remove("visible");
+  });
+
+  // Sidebar nav items
+  document.querySelectorAll(".sidebar-nav-item").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const action = btn.dataset.action;
+      document.querySelectorAll(".sidebar-nav-item").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      if (action === "scroll-phone") { document.getElementById("colPhones")?.scrollIntoView({ behavior:"smooth", block:"start" }); }
+      else if (action === "scroll-wifi")  { document.getElementById("colWifi")?.scrollIntoView({ behavior:"smooth", block:"start" }); }
+      else if (action === "scroll-car")   { document.getElementById("colCars")?.scrollIntoView({ behavior:"smooth", block:"start" }); }
+      else if (action === "manage-users") { openUsersModal(); }
+
+      // Close sidebar on mobile
+      if (window.innerWidth < 900) {
+        sidebar?.classList.remove("open");
+        overlay.classList.remove("visible");
+      }
+    });
+  });
+}
+
+// ─── MANAGE USERS ─────────────────────────────────────────────
+function openUsersModal() {
+  renderUsersList();
+  openOverlay("usersOverlay");
+}
+
+function renderUsersList() {
+  const list = loadEmployees();
+  const container = document.getElementById("usersList");
+  if (!container) return;
+  if (!list.length) {
+    container.innerHTML = `<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px;">Сотрудников пока нет. Добавьте первого.</div>`;
+    return;
+  }
+  container.innerHTML = list.map((emp, i) => `
+    <div class="user-row">
+      <div class="user-row-avatar">${emp.name[0].toUpperCase()}</div>
+      <div class="user-row-info">
+        <div class="user-row-name">${escapeHtml(emp.name)}</div>
+        <div class="user-row-login">Логин: <b>${escapeHtml(emp.login)}</b></div>
+        <div class="user-row-pw">Пароль: ${escapeHtml(emp.password)}</div>
+      </div>
+      <button class="user-row-delete" data-idx="${i}">🗑 Удалить</button>
+    </div>
+  `).join("");
+
+  container.querySelectorAll(".user-row-delete").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.idx);
+      const list = loadEmployees();
+      list.splice(idx, 1);
+      saveEmployees(list);
+      renderUsersList();
+    });
+  });
+}
+
+function addEmployee() {
+  const login    = getVal("newUserLogin").trim();
+  const password = getVal("newUserPassword").trim();
+  const name     = getVal("newUserName").trim();
+  if (!login || !password || !name) { alert("Заполните все поля."); return; }
+  const list = loadEmployees();
+  if (list.find(e => e.login === login)) { alert("Такой логин уже существует."); return; }
+  list.push({ login, password, name });
+  saveEmployees(list);
+  setVal("newUserLogin", "");
+  setVal("newUserPassword", "");
+  setVal("newUserName", "");
+  renderUsersList();
+}
+
+// ─── EXCEL EXPORT ─────────────────────────────────────────────
+function exportToExcel() {
+  const dt  = now();
+  const monthName = dt.toLocaleDateString("ru-RU", { month:"long", year:"numeric" });
+
+  // Build HTML table for Excel
+  const catHeaders = {
+    phone: ["Номер телефона", "Компания", "На чьё имя", "Оператор", "Интернет", "Тарифный план", "Абон. плата", "День оплаты", "Тип оплаты", "Статус", "Адрес", "Примечание"],
+    wifi:  ["Название / Адрес", "Компания", "Провайдер", "Тариф / Скорость", "Ежемес. плата", "День оплаты", "Договор", "Тип оплаты", "Статус", "Адрес объекта", "Примечание"],
+    car:   ["Автомобиль", "Компания", "Тип расхода", "Водитель", "Гос. номер", "Провайдер / Страховщик", "Ежемес. плата", "День оплаты", "Тип оплаты", "Статус", "Примечание"],
+  };
+
+  const statusLabel = (item) => {
+    const s = getStatus(item);
+    if (s === "paid")   return "✓ Оплачено";
+    if (s === "danger") return "🔴 СРОЧНО";
+    if (s === "warn")   return "⚠ Скоро";
+    return "✓ В порядке";
+  };
+
+  const payTypeLabel = (item) => getPayType(item) === "transfer" ? "Перечисление" : "Наличные";
+
+  const buildRows = (cat) => {
+    return (data[cat] || []).map(item => {
+      if (cat === "phone") return [item.name, item.company, item.owner || "—", item.operator, item.internet || "—", item.tariff || "—", item.abFee || "—", item.payDay, payTypeLabel(item), statusLabel(item), item.address || "—", item.note || "—"];
+      if (cat === "wifi")  return [item.name, item.company, item.provider, item.tariff || "—", item.fee || "—", item.payDay, item.contract || "—", payTypeLabel(item), statusLabel(item), item.address || "—", item.note || "—"];
+      if (cat === "car")   return [item.name, item.company, item.type || "—", item.driver || "—", item.plate || "—", item.provider || "—", item.fee || "—", item.payDay, payTypeLabel(item), statusLabel(item), item.note || "—"];
+      return [];
+    });
+  };
+
+  let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8"><style>
+  body { font-family: Calibri, sans-serif; font-size: 11pt; }
+  .title-row td { font-size: 14pt; font-weight: bold; background: #1a5276; color: #fff; padding: 8px 12px; }
+  .section-row td { font-size: 12pt; font-weight: bold; background: #2980b9; color: #fff; padding: 6px 10px; }
+  .header-row td { font-weight: bold; background: #d6eaf8; color: #1a5276; padding: 5px 10px; border: 1px solid #aed6f1; font-size: 10pt; }
+  .data-row td { padding: 5px 10px; border: 1px solid #d5d8dc; font-size: 10pt; }
+  .data-row:nth-child(even) td { background: #f8f9fa; }
+  .paid td { color: #1e8449; }
+  .danger td { color: #cb4335; font-weight: bold; }
+  .warn td { color: #d35400; }
+</style></head><body>
+<table>
+  <tr class="title-row"><td colspan="15">📊 Mone Manager — Отчёт за ${monthName}</td></tr>
+  <tr><td colspan="15"></td></tr>`;
+
+  const sections = [
+    { cat: "phone", label: "📱 Телефоны" },
+    { cat: "wifi",  label: "📶 Wi-Fi / Интернет" },
+    { cat: "car",   label: "🚗 Машины / GPS" },
+  ];
+
+  sections.forEach(({ cat, label }) => {
+    const rows = buildRows(cat);
+    html += `<tr class="section-row"><td colspan="${catHeaders[cat].length}">${label}</td></tr>`;
+    html += `<tr class="header-row">${catHeaders[cat].map(h => `<td>${h}</td>`).join("")}</tr>`;
+    if (!rows.length) {
+      html += `<tr class="data-row"><td colspan="${catHeaders[cat].length}" style="color:#aaa;text-align:center;">Нет данных</td></tr>`;
+    } else {
+      rows.forEach((row, i) => {
+        const item = (data[cat] || [])[i];
+        const st   = item ? getStatus(item) : "ok";
+        const cls  = st === "paid" ? "paid" : st === "danger" ? "danger" : st === "warn" ? "warn" : "";
+        html += `<tr class="data-row ${cls}">${row.map(cell => `<td>${escapeXml(cell)}</td>`).join("")}</tr>`;
+      });
+    }
+    html += `<tr><td colspan="${catHeaders[cat].length}"></td></tr>`;
+  });
+
+  // Summary
+  const allIt = allItems();
+  const totalSum = allIt.reduce((acc, item) => {
+    const fee = item.abFee || item.fee || "0";
+    const num = parseFloat(String(fee).replace(/[^\d.]/g, "")) || 0;
+    return acc + num;
+  }, 0);
+
+  html += `<tr class="section-row"><td colspan="10">📋 Итого</td></tr>
+  <tr class="header-row"><td>Всего записей</td><td>Телефоны</td><td>Wi-Fi</td><td>Машины</td><td>Оплачено</td><td>Срочно</td><td colspan="4">Примерная сумма в мес.</td></tr>
+  <tr class="data-row">
+    <td>${allIt.length}</td>
+    <td>${(data.phone||[]).length}</td>
+    <td>${(data.wifi||[]).length}</td>
+    <td>${(data.car||[]).length}</td>
+    <td>${allIt.filter(i => i.paidThisMonth).length}</td>
+    <td>${allIt.filter(i => getStatus(i) === "danger").length}</td>
+    <td colspan="4">${totalSum.toLocaleString("ru-RU")} сум</td>
+  </tr>
+</table></body></html>`;
+
+  const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `MoneManager_Отчёт_${dt.toLocaleDateString("ru-RU").replace(/\./g,"-")}.xls`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function escapeXml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
 }
 
 // ─── EVENT LISTENERS ─────────────────────────────────────────
 
-// Lock screen
-const lockBtn  = document.getElementById("lockBtn");
-const lockPw   = document.getElementById("lockPassword");
-const lockErr  = document.getElementById("lockError");
+// Role tab selection on lock screen
+document.querySelectorAll(".role-tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    selectedRole = btn.dataset.role;
+    document.querySelectorAll(".role-tab").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    // Show/hide login field
+    const loginField = document.getElementById("lockLogin");
+    if (loginField) loginField.style.display = selectedRole === "manager" ? "block" : "block";
+    const hint = document.getElementById("lockHint");
+    if (hint) hint.textContent = selectedRole === "manager" ? "Менеджер: admin / admin123" : "Введите логин и пароль, выданные менеджером";
+  });
+});
+
+// Lock screen login
+const lockBtn = document.getElementById("lockBtn");
+const lockErr = document.getElementById("lockError");
 
 if (lockBtn) {
   lockBtn.addEventListener("click", () => {
-    if (lockPw.value === APP_PASSWORD) {
-      login();
+    const loginVal = (document.getElementById("lockLogin")?.value || "").trim();
+    const passVal  = (document.getElementById("lockPassword")?.value || "");
+
+    if (selectedRole === "manager") {
+      if (loginVal === MANAGER_LOGIN && passVal === MANAGER_PASSWORD) {
+        login("manager", "Менеджер");
+      } else {
+        if (lockErr) lockErr.textContent = "Неверный логин или пароль";
+        shakeLoginError();
+      }
     } else {
-      if (lockErr) lockErr.textContent = "Неверный пароль";
-      lockPw.value = "";
-      lockPw.style.borderColor = "var(--danger)";
-      lockPw.style.boxShadow   = "0 0 0 3px var(--danger-bg)";
-      setTimeout(() => { lockPw.style.borderColor = ""; lockPw.style.boxShadow = ""; }, 1200);
+      // Employee login
+      const employees = loadEmployees();
+      const emp = employees.find(e => e.login === loginVal && e.password === passVal);
+      if (emp) {
+        login("employee", emp.name);
+      } else {
+        if (lockErr) lockErr.textContent = "Неверный логин или пароль";
+        shakeLoginError();
+      }
     }
   });
 }
+
+const lockPw = document.getElementById("lockPassword");
 if (lockPw) lockPw.addEventListener("keydown", e => { if (e.key === "Enter" && lockBtn) lockBtn.click(); });
+const lockLogin = document.getElementById("lockLogin");
+if (lockLogin) lockLogin.addEventListener("keydown", e => { if (e.key === "Enter") lockPw?.focus(); });
+
+function shakeLoginError() {
+  [document.getElementById("lockLogin"), document.getElementById("lockPassword")].forEach(el => {
+    if (!el) return;
+    el.style.borderColor = "var(--danger)";
+    el.style.boxShadow   = "0 0 0 3px var(--danger-bg)";
+    setTimeout(() => { el.style.borderColor = ""; el.style.boxShadow = ""; }, 1200);
+  });
+}
 
 // Logout
-const logoutBtn = document.getElementById("btnLogout");
-if (logoutBtn) logoutBtn.addEventListener("click", logout);
+document.getElementById("btnLogout")?.addEventListener("click", logout);
 
-// FAB main button
-const fabAdd = document.getElementById("fabAdd");
-if (fabAdd) fabAdd.addEventListener("click", toggleFab);
+// Export Excel
+document.getElementById("btnExportXls")?.addEventListener("click", exportToExcel);
 
-// FAB category items
+// FAB
+document.getElementById("fabAdd")?.addEventListener("click", toggleFab);
+
 document.querySelectorAll(".fab-item").forEach(btn => {
   btn.addEventListener("click", () => {
     const cat = btn.dataset.cat;
     fabOpen = false;
-    document.querySelector(".fab-wrap").classList.remove("open");
+    document.querySelector(".fab-wrap")?.classList.remove("open");
     if (cat) startAdd(cat);
   });
 });
 
 // Column add buttons
 document.querySelectorAll(".btn-col-add").forEach(btn => {
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
     const cat = btn.dataset.cat;
     if (cat) startAdd(cat);
   });
@@ -704,58 +1029,46 @@ document.querySelectorAll(".btn-col-add").forEach(btn => {
 
 // Payment type tabs
 document.querySelectorAll(".pay-tab").forEach(btn => {
-  btn.addEventListener("click", () => {
-    switchPayType(btn.dataset.type);
-  });
+  btn.addEventListener("click", () => switchPayType(btn.dataset.type));
 });
 
 // Close FAB on outside click
 document.addEventListener("click", e => {
   if (fabOpen && !e.target.closest(".fab-wrap")) {
     fabOpen = false;
-    document.querySelector(".fab-wrap").classList.remove("open");
+    document.querySelector(".fab-wrap")?.classList.remove("open");
   }
 });
 
 // View modal actions
-const vBtnClose  = document.getElementById("vBtnClose");
-const vBtnEdit   = document.getElementById("vBtnEdit");
-const vBtnDelete = document.getElementById("vBtnDelete");
-const btnMarkPaid = document.getElementById("btnMarkPaid");
-
-if (vBtnClose)  vBtnClose.addEventListener("click", closeViewModal);
-if (vBtnEdit)   vBtnEdit.addEventListener("click",   () => { if (currentViewId && currentViewCat) startEdit(currentViewCat, currentViewId); });
-if (vBtnDelete) vBtnDelete.addEventListener("click", () => { if (currentViewId && currentViewCat) startDelete(currentViewCat, currentViewId); });
-if (btnMarkPaid) btnMarkPaid.addEventListener("click", markPaid);
+document.getElementById("vBtnClose")?.addEventListener("click", closeViewModal);
+document.getElementById("vBtnEdit")?.addEventListener("click", () => { if (currentViewId && currentViewCat) startEdit(currentViewCat, currentViewId); });
+document.getElementById("vBtnDelete")?.addEventListener("click", () => { if (currentViewId && currentViewCat) startDelete(currentViewCat, currentViewId); });
+document.getElementById("btnMarkPaid")?.addEventListener("click", markPaid);
 
 // Edit modal
-const editCancel = document.getElementById("editCancel");
-const editSave   = document.getElementById("editSave");
-if (editCancel) editCancel.addEventListener("click", () => closeOverlay("editOverlay"));
-if (editSave)   editSave.addEventListener("click", saveEdit);
+document.getElementById("editCancel")?.addEventListener("click", () => closeOverlay("editOverlay"));
+document.getElementById("editSave")?.addEventListener("click", saveEdit);
 
 // Password modal
-const pwConfirm = document.getElementById("pwConfirm");
-const pwCancel  = document.getElementById("pwCancel");
-const pwInput   = document.getElementById("pwInput");
-if (pwConfirm) pwConfirm.addEventListener("click", confirmPassword);
-if (pwCancel)  pwCancel.addEventListener("click",  () => { closeOverlay("pwOverlay"); pendingAction = null; });
-if (pwInput)   pwInput.addEventListener("keydown",  e => { if (e.key === "Enter") confirmPassword(); });
+document.getElementById("pwConfirm")?.addEventListener("click", confirmPassword);
+document.getElementById("pwCancel")?.addEventListener("click", () => { closeOverlay("pwOverlay"); pendingAction = null; });
+document.getElementById("pwInput")?.addEventListener("keydown", e => { if (e.key === "Enter") confirmPassword(); });
 
 // Delete modal
-const deleteConfirm = document.getElementById("deleteConfirm");
-const deleteCancel  = document.getElementById("deleteCancel");
-if (deleteConfirm) {
-  deleteConfirm.addEventListener("click", () => {
-    if (pendingDeleteId && pendingDeleteCat) executeDelete(pendingDeleteCat, pendingDeleteId);
-  });
-}
-if (deleteCancel) {
-  deleteCancel.addEventListener("click", () => { closeOverlay("deleteOverlay"); pendingDeleteId = null; pendingDeleteCat = null; });
-}
+document.getElementById("deleteConfirm")?.addEventListener("click", () => {
+  if (pendingDeleteId && pendingDeleteCat) executeDelete(pendingDeleteCat, pendingDeleteId);
+});
+document.getElementById("deleteCancel")?.addEventListener("click", () => {
+  closeOverlay("deleteOverlay"); pendingDeleteId = null; pendingDeleteCat = null;
+});
+
+// Users modal
+document.getElementById("usersClose")?.addEventListener("click", () => closeOverlay("usersOverlay"));
+document.getElementById("btnAddUser")?.addEventListener("click", addEmployee);
 
 // Backdrop click closes overlays
-["viewOverlay","editOverlay","pwOverlay","deleteOverlay"].forEach(id => {
+["viewOverlay","editOverlay","pwOverlay","deleteOverlay","usersOverlay"].forEach(id => {
   const el = document.getElementById(id);
   if (el) {
     el.addEventListener("click", e => {
@@ -772,17 +1085,30 @@ if (deleteCancel) {
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeAllModals(); });
 
 // ─── INIT ────────────────────────────────────────────────────
+loadCollapsed();
+initCollapsible();
+initSidebar();
+
 setTimeout(() => {
   firebaseReady = true;
   loadFromFirebase();
 }, 500);
 
 if (isLoggedIn()) {
-  document.getElementById("lockScreen").style.display = "none";
-  document.getElementById("app").style.display = "block";
+  const s = getSessionData();
+  if (s) {
+    currentRole     = s.role;
+    currentUserName = s.name;
+    document.getElementById("lockScreen").style.display = "none";
+    document.getElementById("app").style.display = "flex";
+    applyRoleUI();
+    applyCollapsed();
+  } else {
+    setTimeout(() => { document.getElementById("lockLogin")?.focus(); }, 400);
+  }
 } else {
-  setTimeout(() => { const el = document.getElementById("lockPassword"); if (el) el.focus(); }, 400);
+  setTimeout(() => { document.getElementById("lockLogin")?.focus(); }, 400);
 }
 
-// Auto-refresh every minute
+// Auto-refresh
 setInterval(() => { if (isLoggedIn()) renderAll(); }, 60_000);
