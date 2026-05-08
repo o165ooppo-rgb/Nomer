@@ -15,121 +15,195 @@
       <div class="lock-icon">🔒</div>
       <h1 class="lock-title">Mone Manager</h1>
       <p class="lock-sub">Корпоративное управление расходами</p>
+
+      <!-- Role selector -->
+      <div class="role-tabs">
+        <button class="role-tab active" id="roleTabManager" data-role="manager">👔 Менеджер</button>
+        <button class="role-tab" id="roleTabEmployee" data-role="employee">👤 Сотрудник</button>
+      </div>
+
       <div class="lock-input-wrap">
-        <input type="password" id="lockPassword" class="lock-input" placeholder="Введите пароль" autocomplete="off" />
+        <input type="text" id="lockLogin" class="lock-input" placeholder="Логин" autocomplete="off" style="letter-spacing:normal;" />
+        <input type="password" id="lockPassword" class="lock-input" placeholder="Пароль" autocomplete="off" />
         <button class="lock-btn" id="lockBtn">Войти</button>
       </div>
       <p class="lock-error" id="lockError"></p>
+      <p class="lock-hint" id="lockHint">Менеджер: admin / admin123</p>
     </div>
   </div>
 
   <!-- APP -->
   <div class="app" id="app" style="display:none;">
 
-    <!-- HEADER -->
-    <header class="header">
-      <div class="header-inner">
-        <div class="logo">
-          <div class="logo-icon-wrap">
-            <span class="logo-icon">◈</span>
-          </div>
-          <div>
-            <div class="logo-title">Mone Manager</div>
-            <div class="logo-sub" id="headerDate"></div>
-          </div>
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon-wrap">
+          <span class="logo-icon">◈</span>
         </div>
-
-        <div class="header-pills">
-          <div class="pill pill-neutral"><span id="countTotal">0</span> всего</div>
-          <div class="pill pill-warn" id="pillWarn" style="display:none"><span id="countWarning">0</span> ⚠ скоро</div>
-          <div class="pill pill-danger" id="pillDanger" style="display:none"><span id="countDanger">0</span> 🔴 срочно</div>
-        </div>
-
-        <button class="header-logout" id="btnLogout" title="Выйти">⎋ Выйти</button>
+        <span class="sidebar-logo-text">Mone</span>
       </div>
-    </header>
 
-    <!-- ALERT BANNER -->
-    <div class="alert-banner" id="alertBanner" style="display:none;">
-      <span>🔴</span>
-      <span id="alertText"></span>
-    </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-section-label">Категории</div>
+        <button class="sidebar-nav-item active" data-action="scroll-phone">
+          <span class="snav-icon">📱</span>
+          <span class="snav-label">Телефоны</span>
+          <span class="snav-badge" id="snavBadgePhone">0</span>
+        </button>
+        <button class="sidebar-nav-item" data-action="scroll-wifi">
+          <span class="snav-icon">📶</span>
+          <span class="snav-label">Wi-Fi</span>
+          <span class="snav-badge" id="snavBadgeWifi">0</span>
+        </button>
+        <button class="sidebar-nav-item" data-action="scroll-car">
+          <span class="snav-icon">🚗</span>
+          <span class="snav-label">Машины / GPS</span>
+          <span class="snav-badge" id="snavBadgeCar">0</span>
+        </button>
+      </nav>
 
-    <!-- PAYMENT TYPE TABS -->
-    <div class="pay-type-tabs">
-      <button class="pay-tab active" id="tabCash" data-type="cash">
-        💵 Наличные
-      </button>
-      <button class="pay-tab" id="tabTransfer" data-type="transfer">
-        🏦 Перечисление
-      </button>
-    </div>
+      <!-- Manager-only: staff management -->
+      <div class="sidebar-section manager-only" id="sidebarManagerSection">
+        <div class="sidebar-section-label">Управление</div>
+        <button class="sidebar-nav-item" data-action="manage-users">
+          <span class="snav-icon">👥</span>
+          <span class="snav-label">Сотрудники</span>
+        </button>
+      </div>
 
-    <!-- MAIN — 3 COLUMNS -->
-    <main class="main">
-      <div class="columns-layout">
+      <div class="sidebar-bottom">
+        <div class="sidebar-user-card" id="sidebarUserCard">
+          <div class="suc-avatar" id="sucAvatar">M</div>
+          <div class="suc-info">
+            <div class="suc-name" id="sucName">Менеджер</div>
+            <div class="suc-role" id="sucRole">Администратор</div>
+          </div>
+        </div>
+        <button class="sidebar-export-btn" id="btnExportXls" title="Экспорт в Excel">
+          📊 Отчёт Excel
+        </button>
+        <button class="sidebar-logout-btn" id="btnLogout">
+          ⎋ Выйти
+        </button>
+      </div>
+    </aside>
 
-        <!-- ══ COLUMN 1: PHONES ══ -->
-        <div class="category-column" id="colPhones">
-          <div class="col-header">
-            <div class="col-title-wrap">
-              <span class="col-icon">📱</span>
-              <div>
-                <div class="col-title">Телефоны</div>
-                <div class="col-sub">SIM-карты и корпоративные номера</div>
+    <!-- SIDEBAR TOGGLE (mobile) -->
+    <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="content-area" id="contentArea">
+
+      <!-- HEADER -->
+      <header class="header">
+        <div class="header-inner">
+          <div class="header-left">
+            <div class="header-date" id="headerDate"></div>
+            <div class="header-role-badge" id="headerRoleBadge"></div>
+          </div>
+
+          <div class="header-pills">
+            <div class="pill pill-neutral"><span id="countTotal">0</span> всего</div>
+            <div class="pill pill-warn" id="pillWarn" style="display:none"><span id="countWarning">0</span> ⚠ скоро</div>
+            <div class="pill pill-danger" id="pillDanger" style="display:none"><span id="countDanger">0</span> 🔴 срочно</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ALERT BANNER -->
+      <div class="alert-banner" id="alertBanner" style="display:none;">
+        <span>🔴</span>
+        <span id="alertText"></span>
+      </div>
+
+      <!-- PAYMENT TYPE TABS -->
+      <div class="pay-type-tabs">
+        <button class="pay-tab active" id="tabCash" data-type="cash">💵 Наличные</button>
+        <button class="pay-tab" id="tabTransfer" data-type="transfer">🏦 Перечисление</button>
+      </div>
+
+      <!-- MAIN — 3 COLUMNS -->
+      <main class="main">
+        <div class="columns-layout">
+
+          <!-- ══ COLUMN 1: PHONES ══ -->
+          <div class="category-column" id="colPhones">
+            <div class="col-header" data-toggle="phone">
+              <div class="col-title-wrap">
+                <span class="col-icon">📱</span>
+                <div>
+                  <div class="col-title">Телефоны</div>
+                  <div class="col-sub">SIM-карты и корпоративные номера</div>
+                </div>
+              </div>
+              <div class="col-header-actions">
+                <button class="btn-col-add manager-only" data-cat="phone">+ Добавить</button>
+                <button class="col-toggle-btn" data-cat="phone" title="Свернуть/Развернуть">▾</button>
               </div>
             </div>
-            <button class="btn-col-add" data-cat="phone">+ Добавить</button>
+            <div class="col-body" id="colBodyPhone">
+              <div class="col-stats" id="statsPhone"></div>
+              <div class="col-cards" id="cardsPhone"></div>
+            </div>
           </div>
-          <div class="col-stats" id="statsPhone"></div>
-          <div class="col-cards" id="cardsPhone"></div>
-        </div>
 
-        <!-- ══ COLUMN 2: WIFI ══ -->
-        <div class="category-column" id="colWifi">
-          <div class="col-header">
-            <div class="col-title-wrap">
-              <span class="col-icon">📶</span>
-              <div>
-                <div class="col-title">Wi-Fi</div>
-                <div class="col-sub">Интернет-провайдеры и точки доступа</div>
+          <!-- ══ COLUMN 2: WIFI ══ -->
+          <div class="category-column" id="colWifi">
+            <div class="col-header" data-toggle="wifi">
+              <div class="col-title-wrap">
+                <span class="col-icon">📶</span>
+                <div>
+                  <div class="col-title">Wi-Fi</div>
+                  <div class="col-sub">Интернет-провайдеры и точки доступа</div>
+                </div>
+              </div>
+              <div class="col-header-actions">
+                <button class="btn-col-add manager-only" data-cat="wifi">+ Добавить</button>
+                <button class="col-toggle-btn" data-cat="wifi" title="Свернуть/Развернуть">▾</button>
               </div>
             </div>
-            <button class="btn-col-add" data-cat="wifi">+ Добавить</button>
+            <div class="col-body" id="colBodyWifi">
+              <div class="col-stats" id="statsWifi"></div>
+              <div class="col-cards" id="cardsWifi"></div>
+            </div>
           </div>
-          <div class="col-stats" id="statsWifi"></div>
-          <div class="col-cards" id="cardsWifi"></div>
-        </div>
 
-        <!-- ══ COLUMN 3: CARS / GPS ══ -->
-        <div class="category-column" id="colCars">
-          <div class="col-header">
-            <div class="col-title-wrap">
-              <span class="col-icon">🚗</span>
-              <div>
-                <div class="col-title">Машины / GPS</div>
-                <div class="col-sub">Трекеры, страховки, топливо</div>
+          <!-- ══ COLUMN 3: CARS / GPS ══ -->
+          <div class="category-column" id="colCars">
+            <div class="col-header" data-toggle="car">
+              <div class="col-title-wrap">
+                <span class="col-icon">🚗</span>
+                <div>
+                  <div class="col-title">Машины / GPS</div>
+                  <div class="col-sub">Трекеры, страховки, топливо</div>
+                </div>
+              </div>
+              <div class="col-header-actions">
+                <button class="btn-col-add manager-only" data-cat="car">+ Добавить</button>
+                <button class="col-toggle-btn" data-cat="car" title="Свернуть/Развернуть">▾</button>
               </div>
             </div>
-            <button class="btn-col-add" data-cat="car">+ Добавить</button>
+            <div class="col-body" id="colBodyCar">
+              <div class="col-stats" id="statsCar"></div>
+              <div class="col-cards" id="cardsCar"></div>
+            </div>
           </div>
-          <div class="col-stats" id="statsCar"></div>
-          <div class="col-cards" id="cardsCar"></div>
+
         </div>
+      </main>
 
+      <!-- FAB (manager only) -->
+      <div class="fab-wrap manager-only" id="fabWrap">
+        <div class="fab-menu" id="fabMenu">
+          <button class="fab-item" data-cat="phone">📱 Телефон</button>
+          <button class="fab-item" data-cat="wifi">📶 Wi-Fi</button>
+          <button class="fab-item" data-cat="car">🚗 Машина</button>
+        </div>
+        <button class="fab" id="fabAdd">+</button>
       </div>
-    </main>
 
-    <!-- FAB -->
-    <div class="fab-wrap">
-      <div class="fab-menu" id="fabMenu">
-        <button class="fab-item" data-cat="phone">📱 Телефон</button>
-        <button class="fab-item" data-cat="wifi">📶 Wi-Fi</button>
-        <button class="fab-item" data-cat="car">🚗 Машина</button>
-      </div>
-      <button class="fab" id="fabAdd">+</button>
-    </div>
-
+    </div><!-- /content-area -->
   </div><!-- /app -->
 
 
@@ -137,23 +211,19 @@
   <div class="overlay" id="viewOverlay">
     <div class="sheet" id="viewSheet">
       <div class="sheet-handle"></div>
-
       <div class="view-header">
         <div class="view-cat-badge" id="vCatBadge"></div>
         <div class="view-status-badge" id="vStatusBadge"></div>
         <div class="view-number" id="vNumber"></div>
         <div class="view-meta" id="vMeta"></div>
         <div class="view-actions">
-          <button class="action-btn action-edit" id="vBtnEdit">✏️ Изменить</button>
-          <button class="action-btn action-delete" id="vBtnDelete">🗑 Удалить</button>
+          <button class="action-btn action-edit manager-only" id="vBtnEdit">✏️ Изменить</button>
+          <button class="action-btn action-delete manager-only" id="vBtnDelete">🗑 Удалить</button>
           <button class="action-btn action-close" id="vBtnClose">✕</button>
         </div>
       </div>
-
       <div class="view-countdown" id="vCountdown"></div>
-
       <div class="view-fields" id="vFields"></div>
-
       <div class="view-progress-section">
         <div class="progress-labels">
           <span>Цикл оплаты</span>
@@ -163,8 +233,7 @@
           <div class="progress-fill" id="vProgressFill"></div>
         </div>
       </div>
-
-      <div class="view-footer">
+      <div class="view-footer manager-only">
         <button class="btn-paid" id="btnMarkPaid">✓ Отметить оплаченным</button>
       </div>
     </div>
@@ -177,7 +246,6 @@
       <div class="sheet-handle"></div>
       <div class="edit-title" id="editTitle">Добавить номер</div>
       <div class="edit-cat-indicator" id="editCatIndicator"></div>
-
       <!-- PHONE FIELDS -->
       <div class="edit-form" id="formPhone">
         <div class="form-group">
@@ -192,154 +260,63 @@
           <div class="form-group">
             <label>Оператор</label>
             <select id="eOperator">
-              <option>Ucell</option>
-              <option>Beeline</option>
-              <option>Mobiuz</option>
-              <option>Humans</option>
-              <option>UMS</option>
+              <option>Ucell</option><option>Beeline</option><option>Mobiuz</option><option>Humans</option><option>UMS</option>
             </select>
           </div>
         </div>
-        <div class="form-group">
-          <label>На чьё имя</label>
-          <input type="text" id="eOwner" placeholder="Иванов Иван Иванович" />
-        </div>
-        <div class="form-group">
-          <label>Адрес</label>
-          <input type="text" id="eAddress" placeholder="г. Ташкент, ул. Навои 1" />
+        <div class="form-group"><label>На чьё имя</label><input type="text" id="eOwner" placeholder="Иванов Иван Иванович" /></div>
+        <div class="form-group"><label>Адрес</label><input type="text" id="eAddress" placeholder="г. Ташкент, ул. Навои 1" /></div>
+        <div class="form-row">
+          <div class="form-group"><label>Тарифный план</label><input type="text" id="eTariff" placeholder="Бизнес Про" /></div>
+          <div class="form-group"><label>Интернет</label><input type="text" id="eInternet" placeholder="50 ГБ / мес" /></div>
         </div>
         <div class="form-row">
-          <div class="form-group">
-            <label>Тарифный план</label>
-            <input type="text" id="eTariff" placeholder="Бизнес Про" />
-          </div>
-          <div class="form-group">
-            <label>Интернет</label>
-            <input type="text" id="eInternet" placeholder="50 ГБ / мес" />
-          </div>
+          <div class="form-group"><label>Абонентская плата</label><input type="text" id="eAbFee" placeholder="95 000 сум" /></div>
+          <div class="form-group"><label>День оплаты (1–31)</label><input type="number" id="ePayDay" min="1" max="31" placeholder="5" /></div>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Абонентская плата</label>
-            <input type="text" id="eAbFee" placeholder="95 000 сум" />
-          </div>
-          <div class="form-group">
-            <label>День оплаты (1–31)</label>
-            <input type="number" id="ePayDay" min="1" max="31" placeholder="5" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Доп. сумма / услуги</label>
-          <input type="text" id="eExtra" placeholder="—" />
-        </div>
-        <div class="form-group">
-          <label>Примечание</label>
-          <input type="text" id="eNote" placeholder="Любая заметка..." />
-        </div>
+        <div class="form-group"><label>Доп. сумма / услуги</label><input type="text" id="eExtra" placeholder="—" /></div>
+        <div class="form-group"><label>Примечание</label><input type="text" id="eNote" placeholder="Любая заметка..." /></div>
       </div>
-
       <!-- WIFI FIELDS -->
       <div class="edit-form" id="formWifi" style="display:none;">
-        <div class="form-group">
-          <label>Название / Адрес точки</label>
-          <input type="text" id="wName" placeholder="Офис центральный — Wi-Fi" />
-        </div>
+        <div class="form-group"><label>Название / Адрес точки</label><input type="text" id="wName" placeholder="Офис центральный — Wi-Fi" /></div>
         <div class="form-row">
-          <div class="form-group">
-            <label>Компания</label>
-            <input type="text" id="wCompany" placeholder="ООО Ромашка" />
-          </div>
+          <div class="form-group"><label>Компания</label><input type="text" id="wCompany" placeholder="ООО Ромашка" /></div>
           <div class="form-group">
             <label>Провайдер</label>
             <select id="wProvider">
-              <option>Uztelecom</option>
-              <option>Sarkor</option>
-              <option>Perfectum</option>
-              <option>Comnet</option>
-              <option>Ucell Broadband</option>
-              <option>Другой</option>
+              <option>Uztelecom</option><option>Sarkor</option><option>Perfectum</option><option>Comnet</option><option>Ucell Broadband</option><option>Другой</option>
             </select>
           </div>
         </div>
-        <div class="form-group">
-          <label>Скорость / Тариф</label>
-          <input type="text" id="wTariff" placeholder="100 Мбит/с — Безлимит" />
-        </div>
-        <div class="form-group">
-          <label>Адрес объекта</label>
-          <input type="text" id="wAddress" placeholder="г. Ташкент, ул. Навои 1" />
-        </div>
+        <div class="form-group"><label>Скорость / Тариф</label><input type="text" id="wTariff" placeholder="100 Мбит/с — Безлимит" /></div>
+        <div class="form-group"><label>Адрес объекта</label><input type="text" id="wAddress" placeholder="г. Ташкент, ул. Навои 1" /></div>
         <div class="form-row">
-          <div class="form-group">
-            <label>Ежемесячная оплата</label>
-            <input type="text" id="wFee" placeholder="250 000 сум" />
-          </div>
-          <div class="form-group">
-            <label>День оплаты (1–31)</label>
-            <input type="number" id="wPayDay" min="1" max="31" placeholder="10" />
-          </div>
+          <div class="form-group"><label>Ежемесячная оплата</label><input type="text" id="wFee" placeholder="250 000 сум" /></div>
+          <div class="form-group"><label>День оплаты (1–31)</label><input type="number" id="wPayDay" min="1" max="31" placeholder="10" /></div>
         </div>
-        <div class="form-group">
-          <label>Договор / Лицевой счёт</label>
-          <input type="text" id="wContract" placeholder="№ 123456" />
-        </div>
-        <div class="form-group">
-          <label>Примечание</label>
-          <input type="text" id="wNote" placeholder="Любая заметка..." />
-        </div>
+        <div class="form-group"><label>Договор / Лицевой счёт</label><input type="text" id="wContract" placeholder="№ 123456" /></div>
+        <div class="form-group"><label>Примечание</label><input type="text" id="wNote" placeholder="Любая заметка..." /></div>
       </div>
-
-      <!-- CAR / GPS FIELDS -->
+      <!-- CAR FIELDS -->
       <div class="edit-form" id="formCar" style="display:none;">
-        <div class="form-group">
-          <label>Автомобиль</label>
-          <input type="text" id="cName" placeholder="Chevrolet Nexia — 01 ABC 123" />
-        </div>
+        <div class="form-group"><label>Автомобиль</label><input type="text" id="cName" placeholder="Chevrolet Nexia — 01 ABC 123" /></div>
         <div class="form-row">
-          <div class="form-group">
-            <label>Компания</label>
-            <input type="text" id="cCompany" placeholder="ООО Ромашка" />
-          </div>
+          <div class="form-group"><label>Компания</label><input type="text" id="cCompany" placeholder="ООО Ромашка" /></div>
           <div class="form-group">
             <label>Тип расхода</label>
-            <select id="cType">
-              <option>GPS-трекер</option>
-              <option>Страховка</option>
-              <option>Топливная карта</option>
-              <option>Тех. обслуживание</option>
-              <option>Аренда</option>
-              <option>Другое</option>
-            </select>
+            <select id="cType"><option>GPS-трекер</option><option>Страховка</option><option>Топливная карта</option><option>Тех. обслуживание</option><option>Аренда</option><option>Другое</option></select>
           </div>
         </div>
-        <div class="form-group">
-          <label>Водитель / Ответственный</label>
-          <input type="text" id="cDriver" placeholder="Иванов Иван" />
-        </div>
-        <div class="form-group">
-          <label>GPS-провайдер / Страховщик</label>
-          <input type="text" id="cProvider" placeholder="Uzauto GPS / Alfa Insurance" />
-        </div>
+        <div class="form-group"><label>Водитель / Ответственный</label><input type="text" id="cDriver" placeholder="Иванов Иван" /></div>
+        <div class="form-group"><label>GPS-провайдер / Страховщик</label><input type="text" id="cProvider" placeholder="Uzauto GPS / Alfa Insurance" /></div>
         <div class="form-row">
-          <div class="form-group">
-            <label>Ежемесячная оплата</label>
-            <input type="text" id="cFee" placeholder="80 000 сум" />
-          </div>
-          <div class="form-group">
-            <label>День оплаты (1–31)</label>
-            <input type="number" id="cPayDay" min="1" max="31" placeholder="1" />
-          </div>
+          <div class="form-group"><label>Ежемесячная оплата</label><input type="text" id="cFee" placeholder="80 000 сум" /></div>
+          <div class="form-group"><label>День оплаты (1–31)</label><input type="number" id="cPayDay" min="1" max="31" placeholder="1" /></div>
         </div>
-        <div class="form-group">
-          <label>Гос. номер</label>
-          <input type="text" id="cPlate" placeholder="01 A 123 BC" />
-        </div>
-        <div class="form-group">
-          <label>Примечание</label>
-          <input type="text" id="cNote" placeholder="Любая заметка..." />
-        </div>
+        <div class="form-group"><label>Гос. номер</label><input type="text" id="cPlate" placeholder="01 A 123 BC" /></div>
+        <div class="form-group"><label>Примечание</label><input type="text" id="cNote" placeholder="Любая заметка..." /></div>
       </div>
-
       <div class="edit-footer">
         <button class="btn-ghost" id="editCancel">Отмена</button>
         <button class="btn-primary" id="editSave">Сохранить</button>
@@ -378,6 +355,31 @@
       </div>
     </div>
   </div>
+
+
+  <!-- ═══ MANAGE USERS MODAL ═══ -->
+  <div class="overlay" id="usersOverlay">
+    <div class="sheet users-sheet">
+      <div class="sheet-handle"></div>
+      <div class="users-header">
+        <div class="users-title">👥 Управление сотрудниками</div>
+        <button class="action-btn action-close" id="usersClose">✕</button>
+      </div>
+      <div class="users-body">
+        <div class="users-add-form">
+          <div class="form-row">
+            <div class="form-group"><label>Логин</label><input type="text" id="newUserLogin" placeholder="ivan.petrov" /></div>
+            <div class="form-group"><label>Пароль</label><input type="text" id="newUserPassword" placeholder="••••••" /></div>
+          </div>
+          <div class="form-group"><label>Имя сотрудника</label><input type="text" id="newUserName" placeholder="Иванов Иван" /></div>
+          <button class="btn-primary" id="btnAddUser" style="width:100%;margin-top:4px;">+ Добавить сотрудника</button>
+        </div>
+        <div class="users-list-label">Список сотрудников</div>
+        <div class="users-list" id="usersList"></div>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
