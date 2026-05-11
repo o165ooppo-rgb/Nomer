@@ -140,38 +140,30 @@ body::before {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   ▓▓▓ SIDEBAR — PRODUCTION-GRADE IMPLEMENTATION ▓▓▓
-   
-   Strategy:
-   • Desktop (≥ 901px): sidebar is part of normal layout, fixed at left.
-     Body has padding-left = sidebar width, so content never overlaps.
-   • Mobile (≤ 900px): sidebar slides in from left as overlay drawer.
-     Hamburger button visible. Dark scrim behind sidebar. Body scroll locked.
-
-   Critical fixes vs. previous version:
-   • Explicit height (100dvh) so sidebar always fills viewport.
-   • Overlay uses `visibility` toggle for cleaner pointer handling.
-   • Hamburger uses `inline-flex` for cross-browser consistency.
-   • z-index ladder: hamburger(401) > sidebar(400) > overlay(399).
+   ▓▓▓▓▓  S I D E B A R   —   B U I L T   F R O M   S C R A T C H  ▓▓▓▓▓
+   Two completely separate behaviors for desktop and mobile.
+   Desktop (≥ 901px): always visible, fixed left, no animation.
+   Mobile  (≤ 900px): hidden off-screen, slides in via .is-open class.
 ═══════════════════════════════════════════════════════════════ */
 
+/* ── Desktop sidebar (default) ─────────────────────────────── */
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
+  bottom: 0;
   width: var(--sidebar-w);
-  height: 100vh;
-  height: 100dvh;                 /* dynamic viewport for mobile browsers */
-  z-index: 400;
+  z-index: 300;
   background: #ffffff;
   border-right: 1px solid var(--divider);
+  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
   padding: 0 0 16px;
-  overflow: hidden;               /* contain children — nav has its own scroll */
+  /* Important: NO transform on desktop. Sidebar is always at left:0 */
 }
 
-/* ── Sidebar header (logo + close on mobile) ──────────────── */
+/* ── Sidebar header / logo area ────────────────────────────── */
 .sidebar-logo {
   display: flex;
   align-items: center;
@@ -198,12 +190,11 @@ body::before {
   color: var(--t1);
   letter-spacing: -0.4px;
   flex: 1;
-  min-width: 0;
 }
 
-/* Close button: only shown on mobile */
+/* Close button (✕) — only visible on mobile */
 .sidebar-close-btn {
-  display: none;                  /* hidden on desktop */
+  display: none;
   width: 36px;
   height: 36px;
   background: rgba(0, 0, 0, 0.05);
@@ -214,16 +205,16 @@ body::before {
   cursor: pointer;
   align-items: center;
   justify-content: center;
+  transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
   padding: 0;
-  -webkit-tap-highlight-color: transparent;
 }
-.sidebar-close-btn:active { background: rgba(0, 0, 0, 0.1); }
+.sidebar-close-btn:hover { background: rgba(0, 0, 0, 0.1); color: var(--t1); }
+.sidebar-close-btn:active { transform: scale(0.94); }
 
-/* ── Navigation list (scrollable middle area) ─────────────── */
+/* ── Sidebar navigation ────────────────────────────────────── */
 .sidebar-nav {
-  flex: 1 1 auto;
-  min-height: 0;                  /* allow overflow inside flex */
+  flex: 1;
   padding: 10px 10px 0;
   display: flex;
   flex-direction: column;
@@ -252,7 +243,7 @@ body::before {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 11px 12px;
+  padding: 10px 12px;
   background: transparent;
   border: none;
   border-radius: var(--r-sm);
@@ -261,12 +252,12 @@ body::before {
   font-size: 13.5px;
   font-weight: 500;
   color: var(--t2);
+  transition: background 0.15s, color 0.15s;
   text-align: left;
   position: relative;
-  -webkit-tap-highlight-color: transparent;
 }
 .sidebar-nav-item:hover { background: rgba(0, 0, 0, 0.04); color: var(--t1); }
-.sidebar-nav-item:active { background: rgba(0, 0, 0, 0.08); }
+.sidebar-nav-item:active { background: rgba(0, 0, 0, 0.07); }
 .sidebar-nav-item.active {
   background: var(--blue-light);
   color: var(--blue);
@@ -293,7 +284,6 @@ body::before {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
 }
 .snav-badge {
   font-size: 11px;
@@ -304,14 +294,13 @@ body::before {
   border-radius: 100px;
   min-width: 22px;
   text-align: center;
-  flex-shrink: 0;
 }
 .sidebar-nav-item.active .snav-badge {
   background: rgba(0, 122, 255, 0.18);
   color: var(--blue);
 }
 
-/* ── Sidebar bottom area (user card + buttons) ────────────── */
+/* ── Sidebar bottom (user card + actions) ──────────────────── */
 .sidebar-bottom {
   padding: 12px 10px 0;
   border-top: 1px solid var(--divider);
@@ -364,37 +353,37 @@ body::before {
   gap: 10px;
   padding: 10px 14px;
   cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
   border-radius: var(--r-sm);
   text-align: left;
-  -webkit-tap-highlight-color: transparent;
 }
 .sidebar-export-btn {
   color: var(--ok);
   background: var(--ok-bg);
   border: 1px solid var(--ok-border);
 }
-.sidebar-export-btn:active { background: var(--ok); color: #fff; }
+.sidebar-export-btn:hover { background: var(--ok); color: #fff; }
 .sidebar-logout-btn {
   color: var(--t3);
   background: transparent;
   border: 1px solid rgba(0, 0, 0, 0.1);
   font-weight: 500;
 }
-.sidebar-logout-btn:active {
+.sidebar-logout-btn:hover {
   color: var(--danger);
   border-color: var(--danger-border);
   background: var(--danger-bg);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   HAMBURGER BUTTON (mobile only — hidden on desktop)
+   HAMBURGER TOGGLE BUTTON (mobile only)
 ═══════════════════════════════════════════════════════════════ */
 .sidebar-toggle {
-  display: none;                  /* hidden on desktop, shown via @media */
+  display: none;  /* Hidden on desktop */
   position: fixed;
   top: 12px;
   left: 12px;
-  z-index: 350;                   /* below sidebar (400) so it disappears when drawer opens */
+  z-index: 350;
   width: 44px;
   height: 44px;
   background: #ffffff;
@@ -405,9 +394,14 @@ body::before {
   align-items: center;
   justify-content: center;
   padding: 0;
-  -webkit-tap-highlight-color: transparent;
+  transition: box-shadow 0.15s, transform 0.1s;
 }
-.sidebar-toggle:active { background: #f5f5f7; }
+.sidebar-toggle:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+.sidebar-toggle:active {
+  transform: scale(0.94);
+}
 
 .hamburger {
   display: flex;
@@ -416,7 +410,6 @@ body::before {
   gap: 4px;
   width: 20px;
   height: 16px;
-  pointer-events: none;           /* clicks pass to parent button */
 }
 .hamburger span {
   display: block;
@@ -427,15 +420,21 @@ body::before {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SIDEBAR OVERLAY (mobile only — dark scrim)
+   SIDEBAR OVERLAY (mobile only — dim background behind sidebar)
 ═══════════════════════════════════════════════════════════════ */
 .sidebar-overlay {
-  display: none;                  /* hidden by default; JS sets display:block */
   position: fixed;
   inset: 0;
-  z-index: 399;                   /* just below sidebar */
-  background: rgba(0, 0, 0, 0.5);
-  -webkit-tap-highlight-color: transparent;
+  z-index: 290;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+  /* Hidden by default. JS adds .is-visible to show. */
+}
+.sidebar-overlay.is-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -601,59 +600,497 @@ body::before {
 
 .col-cards { padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 60px; }
 
-/* ═══════════════════════════════════════════
-   ITEM CARD
-═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   ITEM CARD — REDESIGNED with circular timer, balance, animations
+═══════════════════════════════════════════════════════════════ */
 .item-card {
-  position: relative; background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.95);
-  border-radius: var(--r-lg); padding: 16px 16px 14px; cursor: pointer;
-  transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.22s ease;
-  box-shadow: var(--shadow-card); overflow: hidden; user-select: none;
-  animation: cardIn 0.35s cubic-bezier(0.34,1.2,0.64,1) both;
+  position: relative;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--r-lg);
+  padding: 14px 14px 16px;
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.3s ease,
+              border-color 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  user-select: none;
+  animation: cardIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+  -webkit-tap-highlight-color: transparent;
 }
-@keyframes cardIn { from{opacity:0;transform:translateY(8px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-.item-card:hover { transform: translateY(-2px) scale(1.01); box-shadow: 0 8px 28px rgba(0,0,0,0.10); }
-.item-card:active { transform: scale(0.98); }
-.item-card.status-ok     { border-color: var(--ok-border); }
-.item-card.status-warn   { border-color: var(--warn-border); }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.item-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.item-card:hover {
+  transform: translateY(-4px) scale(1.012);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+.item-card:hover::before { opacity: 1; }
+.item-card:active { transform: scale(0.985); }
+
+.item-card.status-ok { border-color: var(--ok-border); }
+.item-card.status-ok::before {
+  background: linear-gradient(135deg, var(--ok-bg) 0%, transparent 60%);
+}
+.item-card.status-warn { border-color: var(--warn-border); }
+.item-card.status-warn::before {
+  background: linear-gradient(135deg, var(--warn-bg) 0%, transparent 60%);
+}
 .item-card.status-danger {
   border-color: var(--danger-border);
-  animation: cardIn 0.35s cubic-bezier(0.34,1.2,0.64,1) both, card-danger 2s ease-in-out 0.35s infinite;
+  animation: cardIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) both,
+             cardPulseDanger 2.4s ease-in-out 0.5s infinite;
 }
-@keyframes card-danger { 0%,100%{box-shadow:var(--shadow-card)} 50%{box-shadow:0 4px 24px rgba(255,59,48,0.16)} }
+.item-card.status-danger::before {
+  background: linear-gradient(135deg, var(--danger-bg) 0%, transparent 55%);
+  opacity: 1;
+  animation: dangerGlow 2.4s ease-in-out infinite;
+}
+@keyframes cardPulseDanger {
+  0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03); }
+  50%      { box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 24px rgba(255,59,48,0.22); }
+}
+@keyframes dangerGlow {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
 
-.card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
-.card-chip { font-size: 10px; font-weight: 600; letter-spacing: 0.4px; padding: 3px 8px; border-radius: 100px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-.card-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.dot-ok     { background: var(--ok);     box-shadow: 0 0 6px var(--ok); }
-.dot-warn   { background: var(--warn);   box-shadow: 0 0 6px var(--warn); }
-.dot-danger { background: var(--danger); box-shadow: 0 0 8px var(--danger); animation: dot-blink 0.9s ease-in-out infinite; }
-.dot-paid   { background: var(--blue);   box-shadow: 0 0 6px var(--blue); }
-@keyframes dot-blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+/* ── Card top row: category chip + day chip ──────────────── */
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+.card-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+.card-day-chip {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--t2);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 4px 10px;
+  border-radius: 100px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.card-day-chip small {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--t3);
+}
 
-.card-name { font-size: 15px; font-weight: 600; color: var(--t1); letter-spacing: 0.1px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-.card-company { font-size: 12px; color: var(--t3); font-weight: 400; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card-detail { font-size: 11px; color: var(--t3); margin-bottom: 10px; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ── Card body: info + timer ─────────────────────────────── */
+.card-body {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 10px;
+}
+.card-info {
+  flex: 1;
+  min-width: 0;
+}
+.card-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--t1);
+  letter-spacing: -0.2px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.card-company {
+  font-size: 12px;
+  color: var(--t3);
+  font-weight: 500;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-detail {
+  font-size: 11px;
+  color: var(--t3);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .card-detail-icon { opacity: 0.6; }
-.card-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--divider); gap: 8px; }
-.card-pay-info { font-size: 11px; color: var(--t3); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card-pay-info b { color: var(--t2); font-weight: 600; }
-.card-badge { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 100px; white-space: nowrap; flex-shrink: 0; }
-.badge-ok     { background: var(--ok-bg); color: var(--ok); }
-.badge-warn   { background: var(--warn-bg); color: var(--warn); }
-.badge-danger { background: var(--danger-bg); color: var(--danger); animation: pill-pulse 1s infinite; }
-.badge-paid   { background: rgba(0,122,255,0.1); color: var(--blue); }
-.card-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--divider); }
-.card-progress-inner { height: 100%; border-radius: 0 2px 2px 0; transition: width 0.4s; }
+
+/* ── Circular timer (the WOW element) ────────────────────── */
+.card-timer {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.timer-ring {
+  position: absolute;
+  inset: 0;
+  transform: rotate(0);
+}
+.timer-ring-bg {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.06);
+  stroke-width: 4;
+}
+.timer-ring-fill {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke 0.4s ease;
+  animation: ringDraw 0.8s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+@keyframes ringDraw {
+  from { stroke-dasharray: 0 138.23; }
+}
+.timer-text {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  line-height: 1;
+}
+.timer-num {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--t1);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.timer-sub {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-top: 2px;
+}
+
+/* Status variants */
+.timer-ok .timer-ring-fill { stroke: var(--ok); }
+.timer-ok .timer-num { color: var(--ok); }
+.timer-warn .timer-ring-fill { stroke: var(--warn); }
+.timer-warn .timer-num { color: var(--warn); }
+.timer-danger .timer-ring-fill {
+  stroke: var(--danger);
+  animation: ringDraw 0.8s cubic-bezier(0.34, 1.2, 0.64, 1) both,
+             ringPulse 1.4s ease-in-out 0.8s infinite;
+}
+.timer-danger .timer-num {
+  color: var(--danger);
+  animation: numPulse 1.4s ease-in-out infinite;
+}
+.timer-paid .timer-ring-fill { stroke: var(--blue); }
+.timer-paid .timer-num {
+  color: var(--blue);
+  font-size: 26px;
+}
+@keyframes ringPulse {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 0 transparent); }
+  50%      { opacity: 0.85; filter: drop-shadow(0 0 6px rgba(255,59,48,0.7)); }
+}
+@keyframes numPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+
+/* ── Balance block ───────────────────────────────────────── */
+.card-balance {
+  background: rgba(0, 122, 255, 0.05);
+  border: 1px solid rgba(0, 122, 255, 0.12);
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-top: 4px;
+  position: relative;
+  z-index: 1;
+  animation: balanceIn 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) 0.15s both;
+}
+@keyframes balanceIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.balance-row-sub { margin-top: 2px; }
+.balance-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.balance-value {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--t1);
+  letter-spacing: -0.3px;
+  font-variant-numeric: tabular-nums;
+}
+.balance-sub {
+  font-size: 11px;
+  color: var(--t3);
+  font-weight: 500;
+}
+.balance-bar {
+  margin-top: 8px;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.balance-bar-fill {
+  height: 100%;
+  background: var(--blue);
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: barGrow 0.9s cubic-bezier(0.34, 1.2, 0.64, 1) 0.25s both;
+}
+@keyframes barGrow { from { width: 0 !important; } }
+
+/* Balance status variants */
+.card-balance.bal-great {
+  background: rgba(52, 199, 89, 0.07);
+  border-color: rgba(52, 199, 89, 0.18);
+}
+.card-balance.bal-great .balance-label { color: var(--ok); }
+.card-balance.bal-great .balance-bar-fill { background: var(--ok); }
+
+.card-balance.bal-ok {
+  background: rgba(0, 122, 255, 0.06);
+  border-color: rgba(0, 122, 255, 0.15);
+}
+.card-balance.bal-ok .balance-label { color: var(--blue); }
+.card-balance.bal-ok .balance-bar-fill { background: var(--blue); }
+
+.card-balance.bal-low {
+  background: rgba(255, 149, 0, 0.07);
+  border-color: rgba(255, 149, 0, 0.2);
+}
+.card-balance.bal-low .balance-label { color: var(--warn); }
+.card-balance.bal-low .balance-bar-fill {
+  background: var(--warn);
+  animation: barGrow 0.9s cubic-bezier(0.34, 1.2, 0.64, 1) 0.25s both,
+             warnBlink 1.6s ease-in-out 1.2s infinite;
+}
+@keyframes warnBlink { 0%,100%{opacity:1} 50%{opacity:0.65} }
+
+.card-balance.bal-critical {
+  background: rgba(255, 59, 48, 0.07);
+  border-color: rgba(255, 59, 48, 0.22);
+  animation: balanceIn 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) 0.15s both,
+             critPulse 2s ease-in-out 1s infinite;
+}
+@keyframes critPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,59,48,0); }
+  50%      { box-shadow: 0 0 0 4px rgba(255,59,48,0.08); }
+}
+.card-balance.bal-critical .balance-label { color: var(--danger); }
+.card-balance.bal-critical .balance-bar-fill { background: var(--danger); }
+
+.card-balance.bal-empty {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+.card-balance.bal-empty .balance-label { color: var(--t3); }
+.card-balance.bal-empty .balance-value { color: var(--t2); font-weight: 600; font-size: 14px; }
+
+/* ── Bottom progress bar (cycle indicator) ───────────────── */
+.card-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--divider);
+}
+.card-progress-inner {
+  height: 100%;
+  border-radius: 0 2px 2px 0;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: progressGrow 1s cubic-bezier(0.34, 1.2, 0.64, 1) 0.3s both;
+}
+@keyframes progressGrow { from { width: 0 !important; } }
 .prog-ok     { background: var(--ok); }
 .prog-warn   { background: var(--warn); }
-.prog-danger { background: var(--danger); }
+.prog-danger {
+  background: var(--danger);
+  animation: progressGrow 1s cubic-bezier(0.34, 1.2, 0.64, 1) 0.3s both,
+             progressShimmer 2s linear 1.3s infinite;
+  background-size: 200% 100%;
+  background-image: linear-gradient(90deg, var(--danger) 0%, #ff6b60 50%, var(--danger) 100%);
+}
+@keyframes progressShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 .prog-paid   { background: var(--blue); }
 
 .col-empty { text-align: center; padding: 32px 16px; color: var(--t3); }
-.col-empty-emoji { font-size: 32px; margin-bottom: 10px; }
+.col-empty-emoji {
+  font-size: 36px;
+  margin-bottom: 10px;
+  animation: emptyBounce 2s ease-in-out infinite;
+}
+@keyframes emptyBounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
 .col-empty p { font-size: 13px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   VIEW MODAL — BALANCE BLOCK
+═══════════════════════════════════════════════════════════════ */
+.view-balance {
+  margin: 0 24px 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(0, 122, 255, 0.05);
+  border: 1px solid rgba(0, 122, 255, 0.15);
+  animation: balanceIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+.vb-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.vb-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.vb-titlewrap { flex: 1; min-width: 0; }
+.vb-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.vb-sub {
+  font-size: 12px;
+  color: var(--t3);
+  margin-top: 2px;
+}
+.vb-amount {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--t1);
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.vb-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.vb-stat {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.vb-stat-label {
+  font-size: 10px;
+  color: var(--t3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+.vb-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--t1);
+  font-variant-numeric: tabular-nums;
+}
+.vb-stat-value small {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--t3);
+}
+.vb-bar {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.vb-bar-fill {
+  height: 100%;
+  background: var(--blue);
+  border-radius: 3px;
+  animation: barGrow 1s cubic-bezier(0.34, 1.2, 0.64, 1) 0.3s both;
+}
+.vb-tip {
+  font-size: 12px;
+  color: var(--t3);
+  text-align: center;
+}
+.vb-tip b { color: var(--t1); font-weight: 700; }
+
+/* View modal balance status variants */
+.view-balance.bal-great { background: rgba(52,199,89,0.06); border-color: rgba(52,199,89,0.2); }
+.view-balance.bal-great .vb-title { color: var(--ok); }
+.view-balance.bal-great .vb-bar-fill { background: var(--ok); }
+
+.view-balance.bal-low { background: rgba(255,149,0,0.06); border-color: rgba(255,149,0,0.22); }
+.view-balance.bal-low .vb-title { color: var(--warn); }
+.view-balance.bal-low .vb-bar-fill { background: var(--warn); }
+
+.view-balance.bal-critical {
+  background: rgba(255,59,48,0.06);
+  border-color: rgba(255,59,48,0.25);
+  animation: balanceIn 0.5s cubic-bezier(0.34,1.2,0.64,1) both,
+             critPulse 2s ease-in-out 1s infinite;
+}
+.view-balance.bal-critical .vb-title { color: var(--danger); }
+.view-balance.bal-critical .vb-bar-fill { background: var(--danger); }
 
 /* ═══════════════════════════════════════════
    FAB
@@ -892,6 +1329,187 @@ body::before {
 body.role-employee .manager-only { display: none !important; }
 
 /* ═══════════════════════════════════════════════════════════════
+   ✨ WOW ANIMATIONS — micro-interactions everywhere
+═══════════════════════════════════════════════════════════════ */
+
+/* Header pills float gently on appear */
+.pill {
+  animation: pillIn 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+@keyframes pillIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Pay-type tabs slide in */
+.pay-tab {
+  animation: tabIn 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+.pay-tab:nth-child(1) { animation-delay: 0.05s; }
+.pay-tab:nth-child(2) { animation-delay: 0.12s; }
+@keyframes tabIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pay-tab {
+  position: relative;
+  overflow: hidden;
+}
+.pay-tab::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
+  background: currentColor;
+  opacity: 0.15;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+  pointer-events: none;
+}
+.pay-tab:active::after {
+  width: 240px;
+  height: 240px;
+  transition: width 0s, height 0s;
+}
+
+/* Category columns float in */
+.category-column {
+  animation: colIn 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+.category-column:nth-child(1) { animation-delay: 0.05s; }
+.category-column:nth-child(2) { animation-delay: 0.12s; }
+.category-column:nth-child(3) { animation-delay: 0.19s; }
+.category-column:nth-child(4) { animation-delay: 0.26s; }
+.category-column:nth-child(5) { animation-delay: 0.33s; }
+@keyframes colIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Column icon gentle hover */
+.col-icon {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.col-header:hover .col-icon {
+  transform: scale(1.15) rotate(-5deg);
+}
+
+/* Stat chips bounce in */
+.col-stat-chip {
+  animation: chipIn 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+.col-stat-chip:nth-child(1) { animation-delay: 0.05s; }
+.col-stat-chip:nth-child(2) { animation-delay: 0.10s; }
+.col-stat-chip:nth-child(3) { animation-delay: 0.15s; }
+.col-stat-chip:nth-child(4) { animation-delay: 0.20s; }
+@keyframes chipIn {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Header date gentle fade */
+.header-date {
+  animation: fadeIn 0.6s ease both;
+}
+.header-role-badge {
+  animation: fadeIn 0.6s ease 0.1s both;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* FAB pulse on idle */
+.fab {
+  animation: fabBreathe 4s ease-in-out infinite;
+}
+@keyframes fabBreathe {
+  0%, 100% { box-shadow: 0 6px 24px rgba(0,122,255,0.4); }
+  50%      { box-shadow: 0 6px 32px rgba(0,122,255,0.6), 0 0 0 8px rgba(0,122,255,0.05); }
+}
+
+/* Alert banner shake on attention */
+.alert-banner {
+  animation: banner-flash 2s ease-in-out infinite, bannerShake 0.6s ease-out;
+}
+@keyframes bannerShake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70% { transform: translateX(-3px); }
+  20%, 40%, 60%, 80% { transform: translateX(3px); }
+}
+
+/* Sidebar items slide in nicely */
+.sidebar-nav-item {
+  animation: navItemIn 0.4s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+.sidebar-nav-item:nth-child(1) { animation-delay: 0.05s; }
+.sidebar-nav-item:nth-child(2) { animation-delay: 0.08s; }
+.sidebar-nav-item:nth-child(3) { animation-delay: 0.11s; }
+.sidebar-nav-item:nth-child(4) { animation-delay: 0.14s; }
+.sidebar-nav-item:nth-child(5) { animation-delay: 0.17s; }
+.sidebar-nav-item:nth-child(6) { animation-delay: 0.20s; }
+@keyframes navItemIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Modal sheet bounce-in */
+.overlay.open .sheet {
+  animation: sheetBounce 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+@keyframes sheetBounce {
+  0%   { transform: translateY(100%); }
+  60%  { transform: translateY(-8px); }
+  100% { transform: translateY(0); }
+}
+
+/* Btn primary pulse on focus */
+.btn-primary:focus-visible {
+  animation: btnFocus 1.4s ease-in-out infinite;
+  outline: none;
+}
+@keyframes btnFocus {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,122,255,0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(0,122,255,0.18); }
+}
+
+/* Lock screen logo gentle float */
+.lock-icon {
+  animation: lockFloat 3s ease-in-out infinite;
+}
+@keyframes lockFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* Form input focus glow */
+.form-group input:focus,
+.form-group select:focus,
+.lock-input:focus {
+  animation: inputFocus 0.3s ease-out;
+}
+@keyframes inputFocus {
+  0%   { box-shadow: 0 0 0 0 var(--blue-light); }
+  50%  { box-shadow: 0 0 0 8px var(--blue-light); }
+  100% { box-shadow: 0 0 0 3px var(--blue-light); }
+}
+
+/* Toggle button rotation */
+.col-toggle-btn {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* Reduce motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    RESPONSIVE — TABLET / MOBILE
 ═══════════════════════════════════════════════════════════════ */
 
@@ -902,20 +1520,21 @@ body.role-employee .manager-only { display: none !important; }
 
 /* ─────────────────────────────────────────────────────────────
    MOBILE BREAKPOINT (≤ 900px)
-   On mobile the sidebar becomes an off-canvas drawer.
+   This is where the sidebar fundamentally changes its behavior:
+   from "always visible" to "off-screen, slides in".
 ───────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
 
   /* Mobile sidebar dimensions */
   :root { --sidebar-w: 280px; }
 
-  /* Sidebar — hidden off-screen by default */
+  /* Sidebar starts hidden off the left edge */
   .sidebar {
     width: 280px;
     max-width: 85vw;
     transform: translateX(-100%);
-    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.20);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.18);
     will-change: transform;
   }
   /* When .is-open is added by JS, slide in */
@@ -923,40 +1542,24 @@ body.role-employee .manager-only { display: none !important; }
     transform: translateX(0);
   }
 
-  /* Hamburger button visible on mobile */
-  .sidebar-toggle {
-    display: inline-flex;
-  }
+  /* Hamburger and close button visible on mobile */
+  .sidebar-toggle { display: flex; }
+  .sidebar-close-btn { display: flex; }
 
-  /* Close button (✕) visible inside sidebar on mobile */
-  .sidebar-close-btn {
-    display: inline-flex;
-  }
-
-  /* Content area takes full width */
+  /* Content area takes full width — no sidebar offset */
   .content-area {
     margin-left: 0;
   }
 
-  /* Lock body scroll when sidebar is open */
+  /* Lock body scroll when sidebar is open on mobile */
   body.sidebar-locked {
     overflow: hidden;
+    touch-action: none;
   }
 
-  /* Overlay is displayed when sidebar opens (JS toggles display) */
-  .sidebar-overlay.is-visible {
-    display: block;
-    animation: sidebarOverlayIn 0.28s ease;
-  }
-
-  /* Header padding to make space for hamburger */
+  /* Make room for the hamburger button in the header */
   .header-inner { padding-left: 68px; }
   .alert-banner { padding-left: 68px; }
-}
-
-@keyframes sidebarOverlayIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
 }
 
 /* Small mobile (≤ 680px) */
