@@ -2,8 +2,11 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
   <meta name="theme-color" content="#f2f2f7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title>Mone Manager</title>
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet" />
@@ -24,8 +27,8 @@
       </div>
 
       <div class="lock-input-wrap">
-        <input type="text" id="lockLogin" class="lock-input" placeholder="Логин" autocomplete="off" style="letter-spacing:normal;" />
-        <input type="password" id="lockPassword" class="lock-input" placeholder="Пароль" autocomplete="off" />
+        <input type="text" id="lockLogin" class="lock-input" placeholder="Логин" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" />
+        <input type="password" id="lockPassword" class="lock-input" placeholder="Пароль" autocomplete="current-password" />
         <button class="lock-btn" id="lockBtn">Войти</button>
       </div>
       <p class="lock-error" id="lockError"></p>
@@ -85,8 +88,8 @@
       </div>
     </aside>
 
-    <!-- SIDEBAR TOGGLE (mobile) -->
-    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Открыть меню">
+    <!-- SIDEBAR TOGGLE (mobile/tablet) -->
+    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Открыть меню" aria-expanded="false">
       <span class="hamburger"><span></span><span></span><span></span></span>
     </button>
 
@@ -150,9 +153,9 @@
         <div class="view-number" id="vNumber"></div>
         <div class="view-meta" id="vMeta"></div>
         <div class="view-actions">
-          <button class="action-btn action-edit manager-only" id="vBtnEdit">✏️ Изменить</button>
-          <button class="action-btn action-delete manager-only" id="vBtnDelete">🗑 Удалить</button>
-          <button class="action-btn action-close" id="vBtnClose">✕</button>
+          <button class="action-btn action-edit manager-only" id="vBtnEdit" aria-label="Изменить">✏️</button>
+          <button class="action-btn action-delete manager-only" id="vBtnDelete" aria-label="Удалить">🗑</button>
+          <button class="action-btn action-close" id="vBtnClose" aria-label="Закрыть">✕</button>
         </div>
       </div>
       <div class="view-countdown" id="vCountdown"></div>
@@ -209,13 +212,13 @@
       <div class="sheet-handle"></div>
       <div class="users-header">
         <div class="users-title">👥 Управление сотрудниками</div>
-        <button class="action-btn action-close" id="usersClose">✕</button>
+        <button class="action-btn action-close" id="usersClose" aria-label="Закрыть">✕</button>
       </div>
       <div class="users-body">
         <div class="users-add-form">
           <div class="form-row">
-            <div class="form-group"><label>Логин</label><input type="text" id="newUserLogin" placeholder="ivan.petrov" /></div>
-            <div class="form-group"><label>Пароль</label><input type="text" id="newUserPassword" placeholder="••••••" /></div>
+            <div class="form-group"><label>Логин</label><input type="text" id="newUserLogin" placeholder="ivan.petrov" autocapitalize="none" autocorrect="off" /></div>
+            <div class="form-group"><label>Пароль</label><input type="text" id="newUserPassword" placeholder="••••••" autocapitalize="none" autocorrect="off" /></div>
           </div>
           <div class="form-group"><label>Имя сотрудника</label><input type="text" id="newUserName" placeholder="Иванов Иван" /></div>
           <button class="btn-primary" id="btnAddUser" style="width:100%;margin-top:4px;">+ Добавить сотрудника</button>
@@ -233,7 +236,7 @@
       <div class="sheet-handle"></div>
       <div class="users-header">
         <div class="users-title">🗂 Управление категориями</div>
-        <button class="action-btn action-close" id="categoriesClose">✕</button>
+        <button class="action-btn action-close" id="categoriesClose" aria-label="Закрыть">✕</button>
       </div>
       <div class="users-body">
         <p class="cat-help">Добавляйте, переименовывайте, настраивайте поля и удаляйте категории. Никакого программирования — всё с помощью кнопок.</p>
@@ -291,8 +294,8 @@
       <div class="pw-title">Сменить логин и пароль менеджера</div>
       <div class="pw-sub">После смены потребуется снова войти в систему.</div>
       <div class="edit-form" style="padding-top:8px;">
-        <div class="form-group"><label>Новый логин</label><input type="text" id="newAdminLogin" placeholder="admin" /></div>
-        <div class="form-group"><label>Новый пароль</label><input type="text" id="newAdminPassword" placeholder="••••••" /></div>
+        <div class="form-group"><label>Новый логин</label><input type="text" id="newAdminLogin" placeholder="admin" autocapitalize="none" autocorrect="off" /></div>
+        <div class="form-group"><label>Новый пароль</label><input type="text" id="newAdminPassword" placeholder="••••••" autocapitalize="none" autocorrect="off" /></div>
         <p class="pw-error" id="credsError"></p>
       </div>
       <div class="pw-footer">
