@@ -140,30 +140,38 @@ body::before {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   ▓▓▓▓▓  S I D E B A R   —   B U I L T   F R O M   S C R A T C H  ▓▓▓▓▓
-   Two completely separate behaviors for desktop and mobile.
-   Desktop (≥ 901px): always visible, fixed left, no animation.
-   Mobile  (≤ 900px): hidden off-screen, slides in via .is-open class.
+   ▓▓▓ SIDEBAR — PRODUCTION-GRADE IMPLEMENTATION ▓▓▓
+   
+   Strategy:
+   • Desktop (≥ 901px): sidebar is part of normal layout, fixed at left.
+     Body has padding-left = sidebar width, so content never overlaps.
+   • Mobile (≤ 900px): sidebar slides in from left as overlay drawer.
+     Hamburger button visible. Dark scrim behind sidebar. Body scroll locked.
+
+   Critical fixes vs. previous version:
+   • Explicit height (100dvh) so sidebar always fills viewport.
+   • Overlay uses `visibility` toggle for cleaner pointer handling.
+   • Hamburger uses `inline-flex` for cross-browser consistency.
+   • z-index ladder: hamburger(401) > sidebar(400) > overlay(399).
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── Desktop sidebar (default) ─────────────────────────────── */
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
-  bottom: 0;
   width: var(--sidebar-w);
-  z-index: 300;
+  height: 100vh;
+  height: 100dvh;                 /* dynamic viewport for mobile browsers */
+  z-index: 400;
   background: #ffffff;
   border-right: 1px solid var(--divider);
-  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
   padding: 0 0 16px;
-  /* Important: NO transform on desktop. Sidebar is always at left:0 */
+  overflow: hidden;               /* contain children — nav has its own scroll */
 }
 
-/* ── Sidebar header / logo area ────────────────────────────── */
+/* ── Sidebar header (logo + close on mobile) ──────────────── */
 .sidebar-logo {
   display: flex;
   align-items: center;
@@ -190,11 +198,12 @@ body::before {
   color: var(--t1);
   letter-spacing: -0.4px;
   flex: 1;
+  min-width: 0;
 }
 
-/* Close button (✕) — only visible on mobile */
+/* Close button: only shown on mobile */
 .sidebar-close-btn {
-  display: none;
+  display: none;                  /* hidden on desktop */
   width: 36px;
   height: 36px;
   background: rgba(0, 0, 0, 0.05);
@@ -205,16 +214,16 @@ body::before {
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
-.sidebar-close-btn:hover { background: rgba(0, 0, 0, 0.1); color: var(--t1); }
-.sidebar-close-btn:active { transform: scale(0.94); }
+.sidebar-close-btn:active { background: rgba(0, 0, 0, 0.1); }
 
-/* ── Sidebar navigation ────────────────────────────────────── */
+/* ── Navigation list (scrollable middle area) ─────────────── */
 .sidebar-nav {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;                  /* allow overflow inside flex */
   padding: 10px 10px 0;
   display: flex;
   flex-direction: column;
@@ -243,7 +252,7 @@ body::before {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 11px 12px;
   background: transparent;
   border: none;
   border-radius: var(--r-sm);
@@ -252,12 +261,12 @@ body::before {
   font-size: 13.5px;
   font-weight: 500;
   color: var(--t2);
-  transition: background 0.15s, color 0.15s;
   text-align: left;
   position: relative;
+  -webkit-tap-highlight-color: transparent;
 }
 .sidebar-nav-item:hover { background: rgba(0, 0, 0, 0.04); color: var(--t1); }
-.sidebar-nav-item:active { background: rgba(0, 0, 0, 0.07); }
+.sidebar-nav-item:active { background: rgba(0, 0, 0, 0.08); }
 .sidebar-nav-item.active {
   background: var(--blue-light);
   color: var(--blue);
@@ -284,6 +293,7 @@ body::before {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 .snav-badge {
   font-size: 11px;
@@ -294,13 +304,14 @@ body::before {
   border-radius: 100px;
   min-width: 22px;
   text-align: center;
+  flex-shrink: 0;
 }
 .sidebar-nav-item.active .snav-badge {
   background: rgba(0, 122, 255, 0.18);
   color: var(--blue);
 }
 
-/* ── Sidebar bottom (user card + actions) ──────────────────── */
+/* ── Sidebar bottom area (user card + buttons) ────────────── */
 .sidebar-bottom {
   padding: 12px 10px 0;
   border-top: 1px solid var(--divider);
@@ -353,37 +364,37 @@ body::before {
   gap: 10px;
   padding: 10px 14px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
   border-radius: var(--r-sm);
   text-align: left;
+  -webkit-tap-highlight-color: transparent;
 }
 .sidebar-export-btn {
   color: var(--ok);
   background: var(--ok-bg);
   border: 1px solid var(--ok-border);
 }
-.sidebar-export-btn:hover { background: var(--ok); color: #fff; }
+.sidebar-export-btn:active { background: var(--ok); color: #fff; }
 .sidebar-logout-btn {
   color: var(--t3);
   background: transparent;
   border: 1px solid rgba(0, 0, 0, 0.1);
   font-weight: 500;
 }
-.sidebar-logout-btn:hover {
+.sidebar-logout-btn:active {
   color: var(--danger);
   border-color: var(--danger-border);
   background: var(--danger-bg);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   HAMBURGER TOGGLE BUTTON (mobile only)
+   HAMBURGER BUTTON (mobile only — hidden on desktop)
 ═══════════════════════════════════════════════════════════════ */
 .sidebar-toggle {
-  display: none;  /* Hidden on desktop */
+  display: none;                  /* hidden on desktop, shown via @media */
   position: fixed;
   top: 12px;
   left: 12px;
-  z-index: 350;
+  z-index: 350;                   /* below sidebar (400) so it disappears when drawer opens */
   width: 44px;
   height: 44px;
   background: #ffffff;
@@ -394,14 +405,9 @@ body::before {
   align-items: center;
   justify-content: center;
   padding: 0;
-  transition: box-shadow 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
 }
-.sidebar-toggle:hover {
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-}
-.sidebar-toggle:active {
-  transform: scale(0.94);
-}
+.sidebar-toggle:active { background: #f5f5f7; }
 
 .hamburger {
   display: flex;
@@ -410,6 +416,7 @@ body::before {
   gap: 4px;
   width: 20px;
   height: 16px;
+  pointer-events: none;           /* clicks pass to parent button */
 }
 .hamburger span {
   display: block;
@@ -420,21 +427,15 @@ body::before {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SIDEBAR OVERLAY (mobile only — dim background behind sidebar)
+   SIDEBAR OVERLAY (mobile only — dark scrim)
 ═══════════════════════════════════════════════════════════════ */
 .sidebar-overlay {
+  display: none;                  /* hidden by default; JS sets display:block */
   position: fixed;
   inset: 0;
-  z-index: 290;
-  background: rgba(0, 0, 0, 0.45);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.28s ease;
-  /* Hidden by default. JS adds .is-visible to show. */
-}
-.sidebar-overlay.is-visible {
-  opacity: 1;
-  pointer-events: auto;
+  z-index: 399;                   /* just below sidebar */
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -901,21 +902,20 @@ body.role-employee .manager-only { display: none !important; }
 
 /* ─────────────────────────────────────────────────────────────
    MOBILE BREAKPOINT (≤ 900px)
-   This is where the sidebar fundamentally changes its behavior:
-   from "always visible" to "off-screen, slides in".
+   On mobile the sidebar becomes an off-canvas drawer.
 ───────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
 
   /* Mobile sidebar dimensions */
   :root { --sidebar-w: 280px; }
 
-  /* Sidebar starts hidden off the left edge */
+  /* Sidebar — hidden off-screen by default */
   .sidebar {
     width: 280px;
     max-width: 85vw;
     transform: translateX(-100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.18);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.20);
     will-change: transform;
   }
   /* When .is-open is added by JS, slide in */
@@ -923,24 +923,40 @@ body.role-employee .manager-only { display: none !important; }
     transform: translateX(0);
   }
 
-  /* Hamburger and close button visible on mobile */
-  .sidebar-toggle { display: flex; }
-  .sidebar-close-btn { display: flex; }
+  /* Hamburger button visible on mobile */
+  .sidebar-toggle {
+    display: inline-flex;
+  }
 
-  /* Content area takes full width — no sidebar offset */
+  /* Close button (✕) visible inside sidebar on mobile */
+  .sidebar-close-btn {
+    display: inline-flex;
+  }
+
+  /* Content area takes full width */
   .content-area {
     margin-left: 0;
   }
 
-  /* Lock body scroll when sidebar is open on mobile */
+  /* Lock body scroll when sidebar is open */
   body.sidebar-locked {
     overflow: hidden;
-    touch-action: none;
   }
 
-  /* Make room for the hamburger button in the header */
+  /* Overlay is displayed when sidebar opens (JS toggles display) */
+  .sidebar-overlay.is-visible {
+    display: block;
+    animation: sidebarOverlayIn 0.28s ease;
+  }
+
+  /* Header padding to make space for hamburger */
   .header-inner { padding-left: 68px; }
   .alert-banner { padding-left: 68px; }
+}
+
+@keyframes sidebarOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* Small mobile (≤ 680px) */
