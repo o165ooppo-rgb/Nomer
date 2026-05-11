@@ -1420,8 +1420,20 @@ function saveCreds() {
 // OVERLAY HELPERS
 // ═══════════════════════════════════════════════════════════
 
-function openOverlay(id)  { const el = document.getElementById(id); if (el) el.classList.add("open"); }
-function closeOverlay(id) { const el = document.getElementById(id); if (el) el.classList.remove("open"); }
+function openOverlay(id)  {
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.add("open");
+    document.body.classList.add("modal-locked");
+  }
+}
+function closeOverlay(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove("open");
+  // Unlock body only if no overlays remain open
+  const anyOpen = document.querySelector(".overlay.open");
+  if (!anyOpen) document.body.classList.remove("modal-locked");
+}
 function closeAllModals() {
   ["viewOverlay","editOverlay","deleteOverlay","usersOverlay","categoriesOverlay","catEditOverlay","credsOverlay"].forEach(closeOverlay);
 }
@@ -1453,7 +1465,8 @@ function toggleFab() {
 // State is mirrored on body, sidebar, and overlay with simple class flags.
 // ═══════════════════════════════════════════════════════════
 
-const MOBILE_BREAKPOINT = 900;
+// Sidebar shows as off-canvas drawer below 1024px (synced with CSS @media)
+const MOBILE_BREAKPOINT = 1023;
 
 function isMobileViewport() {
   return window.innerWidth <= MOBILE_BREAKPOINT;
