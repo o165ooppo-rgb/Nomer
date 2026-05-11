@@ -36,7 +36,8 @@ const DEFAULT_CATEGORIES = [
       { key: "address",  label: "Адрес",                type: "text" },
       { key: "tariff",   label: "Тарифный план",        type: "text" },
       { key: "internet", label: "Интернет",             type: "text" },
-      { key: "abFee",    label: "Абонентская плата",    type: "text",   fee: true },
+      { key: "abFee",    label: "Тарифный план (сум/мес)", type: "text", fee: true },
+      { key: "paidAmount", label: "Сколько оплачено (всего, сум)", type: "text", paidAmount: true },
       { key: "payDay",   label: "День оплаты (1-31)",   type: "number", payDay: true, required: true },
       { key: "extra",    label: "Доп. сумма / услуги",  type: "text" },
       { key: "note",     label: "Примечание",           type: "text" },
@@ -54,7 +55,8 @@ const DEFAULT_CATEGORIES = [
       { key: "provider", label: "Провайдер",               type: "select", options: ["Uztelecom","Sarkor","Perfectum","Comnet","Ucell Broadband","Другой"] },
       { key: "tariff",   label: "Скорость / Тариф",        type: "text" },
       { key: "address",  label: "Адрес объекта",           type: "text" },
-      { key: "fee",      label: "Ежемесячная оплата",      type: "text", fee: true },
+      { key: "fee",      label: "Тарифный план (сум/мес)", type: "text", fee: true },
+      { key: "paidAmount", label: "Сколько оплачено (всего, сум)", type: "text", paidAmount: true },
       { key: "payDay",   label: "День оплаты (1-31)",      type: "number", payDay: true, required: true },
       { key: "contract", label: "Договор / Лицевой счёт",  type: "text" },
       { key: "note",     label: "Примечание",              type: "text" },
@@ -72,7 +74,8 @@ const DEFAULT_CATEGORIES = [
       { key: "terminal", label: "Номер терминала / Кассы", type: "text" },
       { key: "address",  label: "Адрес объекта",           type: "text" },
       { key: "tariff",   label: "Тариф / Версия лицензии", type: "text" },
-      { key: "fee",      label: "Ежемесячная оплата",      type: "text", fee: true },
+      { key: "fee",      label: "Тарифный план (сум/мес)", type: "text", fee: true },
+      { key: "paidAmount", label: "Сколько оплачено (всего, сум)", type: "text", paidAmount: true },
       { key: "payDay",   label: "День оплаты (1-31)",      type: "number", payDay: true, required: true },
       { key: "contract", label: "Договор / ИНН",           type: "text" },
       { key: "responsible", label: "Ответственный",        type: "text" },
@@ -117,6 +120,31 @@ function loadCategories() {
     }
   } catch {
     categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+  }
+  // MIGRATION: auto-add paidAmount field to any category that has fee but no paidAmount
+  migrateCategoriesFields();
+}
+
+function migrateCategoriesFields() {
+  let changed = false;
+  categories.forEach(cat => {
+    if (!Array.isArray(cat.fields)) return;
+    const hasFee = cat.fields.some(f => f.fee);
+    const hasPaid = cat.fields.some(f => f.paidAmount);
+    if (hasFee && !hasPaid) {
+      // Insert paidAmount right after fee field
+      const idx = cat.fields.findIndex(f => f.fee);
+      cat.fields.splice(idx + 1, 0, {
+        key: "paidAmount",
+        label: "Сколько оплачено (всего, сум)",
+        type: "text",
+        paidAmount: true
+      });
+      changed = true;
+    }
+  });
+  if (changed) {
+    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
   }
 }
 
@@ -196,6 +224,7 @@ function loadFromFirebase() {
     const fbCats = snap.val();
     if (Array.isArray(fbCats) && fbCats.length) {
       categories = fbCats;
+      migrateCategoriesFields();
       localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
     }
     // Load admin
@@ -280,6 +309,7 @@ function subscribeFirebase() {
     const fbCats = snapshot.val();
     if (Array.isArray(fbCats) && fbCats.length) {
       categories = fbCats;
+      migrateCategoriesFields();
       localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
       ensureCategoryBuckets();
       renderAll();
@@ -360,9 +390,65 @@ function cycleProgress(item) {
 function getStatus(item) {
   if (item.paidThisMonth) return "paid";
   const d = daysUntilPayment(item);
-  if (d <= 3) return "danger";
-  if (d <= 7) return "warn";
-  return "ok";
+  if (d <= 7) return "danger";    // RED at ≤7 days (per user request)
+  if (d <= 14) return "warn";     // YELLOW at ≤14 days
+  return "ok";                    // BLUE/GREEN at >14 days
+}
+
+// ─── BALANCE CALCULATOR ──────────────────────────────────────
+// Parses a number from a string like "85 000 сум", "85000", "85,000.50"
+function parseAmount(str) {
+  if (str === null || str === undefined || str === "") return null;
+  if (typeof str === "number") return str;
+  // Remove all non-digit characters except dot and comma
+  const cleaned = String(str).replace(/[^\d.,]/g, "").replace(/,/g, ".");
+  // If multiple dots, keep the last as decimal separator
+  const parts = cleaned.split(".");
+  let num;
+  if (parts.length > 2) {
+    num = parseFloat(parts.slice(0, -1).join("") + "." + parts[parts.length - 1]);
+  } else {
+    num = parseFloat(cleaned);
+  }
+  return isNaN(num) ? null : num;
+}
+
+function formatMoney(n) {
+  if (n === null || n === undefined || isNaN(n)) return "—";
+  return Math.round(n).toLocaleString("ru-RU") + " сум";
+}
+
+function formatMonthsAhead(monthsLeft) {
+  if (!monthsLeft || monthsLeft <= 0) return "сейчас";
+  const d = new Date();
+  d.setMonth(d.getMonth() + Math.floor(monthsLeft));
+  const extraDays = Math.round((monthsLeft - Math.floor(monthsLeft)) * 30);
+  d.setDate(d.getDate() + extraDays);
+  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+}
+
+// Returns balance info: { tariff, paid, remaining, monthsLeft, status }
+function calcBalance(item, cat) {
+  if (!item || !cat) return null;
+  const feeField = cat.fields.find(f => f.fee);
+  const paidField = cat.fields.find(f => f.paidAmount);
+  if (!feeField || !paidField) return null;
+
+  const tariff = parseAmount(item[feeField.key]);
+  const paid = parseAmount(item[paidField.key]);
+
+  if (!tariff || tariff <= 0) return null;
+  if (paid === null) return { tariff, paid: null, remaining: null, monthsLeft: null, status: "none" };
+
+  const monthsLeft = paid / tariff;
+  const remaining = paid;
+  let status;
+  if (monthsLeft >= 3) status = "great";       // зелёный — много
+  else if (monthsLeft >= 1) status = "ok";     // синий — хватит
+  else if (monthsLeft >= 0.5) status = "low";  // жёлтый — мало
+  else status = "critical";                    // красный — критично
+
+  return { tariff, paid, remaining, monthsLeft, status };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -578,48 +664,121 @@ function renderColumn(catId) {
     const st       = getStatus(item);
     const days     = daysUntilPayment(item);
     const progress = cycleProgress(item);
-
-    let badgeText, badgeClass;
-    if (st === "paid")   { badgeText = "✓ Оплачено";           badgeClass = "badge-paid"; }
-    else if (days === 0) { badgeText = "Сегодня!";             badgeClass = "badge-danger"; }
-    else if (days <= 3)  { badgeText = `${days} дн. — СРОЧНО`; badgeClass = "badge-danger"; }
-    else if (days <= 7)  { badgeText = `${days} дн.`;          badgeClass = "badge-warn"; }
-    else                 { badgeText = `${days} дн.`;          badgeClass = "badge-ok"; }
-
-    const dotClass  = st === "paid" ? "dot-paid" : `dot-${st}`;
-    const progClass = st === "paid" ? "prog-paid" : `prog-${st}`;
+    const balance  = calcBalance(item, cat);
     const c = cat.color || 1;
+
+    // Timer label (under the ring)
+    let timerLabel, timerSub;
+    if (st === "paid") {
+      timerLabel = "✓";
+      timerSub = "Оплачено";
+    } else if (days === 0) {
+      timerLabel = "СЕГОДНЯ";
+      timerSub = "оплатить";
+    } else if (days === 1) {
+      timerLabel = "1";
+      timerSub = "день";
+    } else if (days < 5) {
+      timerLabel = String(days);
+      timerSub = "дня";
+    } else {
+      timerLabel = String(days);
+      timerSub = "дней";
+    }
+
+    // Timer ring: 365° is full year, but we render 0-30 days as ring fill
+    const maxDays = 30;
+    const ringPct = st === "paid" ? 100 : Math.min(100, Math.max(0, ((maxDays - Math.min(days, maxDays)) / maxDays) * 100));
+    // SVG circle math: radius 22, circumference = 2 * PI * 22 ≈ 138.23
+    const CIRC = 138.23;
+    const ringDash = (ringPct / 100) * CIRC;
 
     const primaryVal   = item[primaryField.key]   || "—";
     const secondaryVal = secondaryField ? (item[secondaryField.key] || "—") : "";
     const feeVal       = feeField ? (item[feeField.key] || "—") : "—";
     const payDay       = item.payDay || "?";
 
-    // pick a 3rd visible field for detail line
-    const detailField = cat.fields.find(f => !f.primary && !f.secondary && !f.payDay && !f.fee && f.key !== "note");
+    // pick a 3rd visible field for detail line (skip fee/payDay/paidAmount/note/primary/secondary)
+    const detailField = cat.fields.find(f =>
+      !f.primary && !f.secondary && !f.payDay && !f.fee && !f.paidAmount && f.key !== "note"
+    );
     const detailHtml = detailField && item[detailField.key]
       ? `<div class="card-detail"><span class="card-detail-icon">📋</span>${escapeHtml(detailField.label)}: ${escapeHtml(item[detailField.key])}</div>`
       : "";
+
+    // Balance block (only if we have data)
+    let balanceHtml = "";
+    if (balance && balance.paid !== null && balance.tariff > 0) {
+      const monthsRounded = balance.monthsLeft >= 1
+        ? balance.monthsLeft.toFixed(1).replace(/\.0$/, "")
+        : balance.monthsLeft.toFixed(2);
+      const balanceClass = `bal-${balance.status}`;
+      const fillPct = Math.min(100, balance.monthsLeft * 33.3); // 3 months = 100%
+      balanceHtml = `
+        <div class="card-balance ${balanceClass}">
+          <div class="balance-row">
+            <span class="balance-label">💰 Баланс</span>
+            <span class="balance-value">${formatMoney(balance.remaining)}</span>
+          </div>
+          <div class="balance-row balance-row-sub">
+            <span class="balance-sub">≈ ${monthsRounded} мес. при тарифе ${formatMoney(balance.tariff)}</span>
+          </div>
+          <div class="balance-bar">
+            <div class="balance-bar-fill" style="width:${fillPct}%"></div>
+          </div>
+        </div>
+      `;
+    } else if (balance && balance.paid === null && feeVal !== "—") {
+      // Show tariff only, hint at adding paidAmount
+      balanceHtml = `
+        <div class="card-balance bal-empty">
+          <div class="balance-row">
+            <span class="balance-label">📋 Тариф</span>
+            <span class="balance-value">${escapeHtml(feeVal)}</span>
+          </div>
+          <div class="balance-row balance-row-sub">
+            <span class="balance-sub">Введите «Сколько оплачено» — посчитаю баланс</span>
+          </div>
+        </div>
+      `;
+    }
 
     const card = document.createElement("div");
     card.className = `item-card status-${st === "paid" ? "ok" : st}`;
     card.dataset.id  = item.id;
     card.dataset.cat = catId;
-    card.style.animationDelay = `${i * 40}ms`;
+    card.style.animationDelay = `${i * 50}ms`;
     card.innerHTML = `
       <div class="card-top">
         <span class="card-chip" style="background:var(--cat-${c}-bg);color:var(--cat-${c});">${escapeHtml(cat.icon || "📦")} ${escapeHtml(cat.name)}</span>
-        <span class="card-dot ${dotClass}"></span>
+        <span class="card-day-chip" title="День оплаты">📅 ${payDay}<small>-е</small></span>
       </div>
-      <div class="card-name">${escapeHtml(primaryVal)}</div>
-      <div class="card-company">${escapeHtml(secondaryVal)}</div>
-      ${detailHtml}
-      <div class="card-footer">
-        <div class="card-pay-info">день <b>${payDay}</b> · ${escapeHtml(feeVal)}</div>
-        <span class="card-badge ${badgeClass}">${badgeText}</span>
+
+      <div class="card-body">
+        <div class="card-info">
+          <div class="card-name">${escapeHtml(primaryVal)}</div>
+          <div class="card-company">${escapeHtml(secondaryVal)}</div>
+          ${detailHtml}
+        </div>
+
+        <div class="card-timer timer-${st}">
+          <svg class="timer-ring" viewBox="0 0 50 50" width="56" height="56">
+            <circle class="timer-ring-bg" cx="25" cy="25" r="22" />
+            <circle class="timer-ring-fill" cx="25" cy="25" r="22"
+              stroke-dasharray="${ringDash} ${CIRC}"
+              transform="rotate(-90 25 25)" />
+          </svg>
+          <div class="timer-text">
+            <div class="timer-num">${timerLabel}</div>
+            <div class="timer-sub">${timerSub}</div>
+          </div>
+        </div>
       </div>
+
+      ${balanceHtml}
+
       <div class="card-progress">
-        <div class="card-progress-inner ${progClass}" style="width:${progress}%"></div>
+        <div class="card-progress-inner prog-${st === "paid" ? "paid" : st}" style="width:${progress}%"></div>
       </div>
     `;
     card.addEventListener("click", () => openViewModal(catId, item.id));
@@ -713,9 +872,47 @@ function openViewModal(catId, id) {
   if (cd) {
     if (st === "paid")      { cd.textContent = "✅ Оплата этого месяца отмечена"; cd.className = "view-countdown cd-paid"; }
     else if (days === 0)    { cd.textContent = "🔴 Оплатить СЕГОДНЯ!"; cd.className = "view-countdown cd-danger"; }
-    else if (days <= 3)     { cd.textContent = `🔴 Осталось ${days} дн. — СРОЧНО ОПЛАТИТЬ`; cd.className = "view-countdown cd-danger"; }
-    else if (days <= 7)     { cd.textContent = `⚠️ До оплаты ${days} дн. — скоро`; cd.className = "view-countdown cd-warn"; }
+    else if (days <= 7)     { cd.textContent = `🔴 Осталось ${days} дн. — СРОЧНО ОПЛАТИТЬ`; cd.className = "view-countdown cd-danger"; }
+    else if (days <= 14)    { cd.textContent = `⚠️ До оплаты ${days} дн. — скоро`; cd.className = "view-countdown cd-warn"; }
     else                    { cd.textContent = `✅ До оплаты ${days} дн. — всё в порядке`; cd.className = "view-countdown cd-ok"; }
+  }
+
+  // ── BALANCE BLOCK in view modal ──
+  // Insert before vFields, after vCountdown
+  const balance = calcBalance(item, cat);
+  const oldBal = document.getElementById("vBalanceBlock");
+  if (oldBal) oldBal.remove();
+  if (balance && balance.paid !== null && balance.tariff > 0) {
+    const monthsRounded = balance.monthsLeft >= 1
+      ? balance.monthsLeft.toFixed(1).replace(/\.0$/, "")
+      : balance.monthsLeft.toFixed(2);
+    const fillPct = Math.min(100, balance.monthsLeft * 33.3);
+    const balDiv = document.createElement("div");
+    balDiv.id = "vBalanceBlock";
+    balDiv.className = `view-balance bal-${balance.status}`;
+    balDiv.innerHTML = `
+      <div class="vb-header">
+        <span class="vb-icon">💰</span>
+        <div class="vb-titlewrap">
+          <div class="vb-title">Баланс счёта</div>
+          <div class="vb-sub">Хватит примерно на ${monthsRounded} мес.</div>
+        </div>
+        <div class="vb-amount">${formatMoney(balance.remaining)}</div>
+      </div>
+      <div class="vb-stats">
+        <div class="vb-stat">
+          <div class="vb-stat-label">Тарифный план</div>
+          <div class="vb-stat-value">${formatMoney(balance.tariff)}<small> / мес</small></div>
+        </div>
+        <div class="vb-stat">
+          <div class="vb-stat-label">Оплачено всего</div>
+          <div class="vb-stat-value">${formatMoney(balance.paid)}</div>
+        </div>
+      </div>
+      <div class="vb-bar"><div class="vb-bar-fill" style="width:${fillPct}%"></div></div>
+      <div class="vb-tip">При неизменном тарифе хватит до <b>${formatMonthsAhead(balance.monthsLeft)}</b></div>
+    `;
+    cd.insertAdjacentElement("afterend", balDiv);
   }
 
   // build fields dynamically — show all category fields except primary
@@ -1249,105 +1446,90 @@ function toggleFab() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// ▓▓▓ SIDEBAR — ROCK-SOLID IMPLEMENTATION ▓▓▓
-//
+// ▓▓▓▓▓  S I D E B A R   —   B U I L T   F R O M   S C R A T C H  ▓▓▓▓▓
 // Two distinct behaviors:
-// • Desktop (≥ 901px): sidebar always visible — no JS needed for show/hide.
-// • Mobile  (≤ 900px): hamburger toggles drawer + dark scrim.
-//
-// Key reliability fixes:
-// • Overlay element created ONCE at init, never queried again from DOM.
-// • Overlay uses inline style.display for show/hide (more reliable than class).
-// • All interactive bits: -webkit-tap-highlight + pointer-events handled.
-// • State is single source of truth (sidebar.is-open class).
+// • Desktop (≥ 901px): sidebar always visible, no JS needed for show/hide.
+// • Mobile  (≤ 900px): hamburger button toggles sidebar. Uses .is-open class.
+// State is mirrored on body, sidebar, and overlay with simple class flags.
 // ═══════════════════════════════════════════════════════════
 
 const MOBILE_BREAKPOINT = 900;
-
-// Cached references (set in initSidebar)
-let _sidebarEl = null;
-let _sidebarOverlayEl = null;
-let _sidebarToggleEl = null;
-let _sidebarCloseEl = null;
 
 function isMobileViewport() {
   return window.innerWidth <= MOBILE_BREAKPOINT;
 }
 
-function openSidebarMobile() {
-  if (!isMobileViewport()) return;
-  if (!_sidebarEl || !_sidebarOverlayEl) return;
-  _sidebarEl.classList.add("is-open");
-  _sidebarOverlayEl.classList.add("is-visible");
-  _sidebarOverlayEl.style.display = "block";   // explicit show
-  document.body.classList.add("sidebar-locked");
-}
-
-function closeSidebarMobile() {
-  if (!_sidebarEl || !_sidebarOverlayEl) return;
-  _sidebarEl.classList.remove("is-open");
-  _sidebarOverlayEl.classList.remove("is-visible");
-  _sidebarOverlayEl.style.display = "none";    // explicit hide
-  document.body.classList.remove("sidebar-locked");
-}
-
-function isSidebarOpenMobile() {
-  return !!(_sidebarEl && _sidebarEl.classList.contains("is-open"));
-}
-
-function initSidebar() {
-  // ─── Cache DOM references ──────────────────────────────────
-  _sidebarEl = document.getElementById("sidebar");
-  _sidebarToggleEl = document.getElementById("sidebarToggle");
-  _sidebarCloseEl = document.getElementById("sidebarCloseBtn");
-
-  // ─── Create overlay if missing ────────────────────────────
+function ensureSidebarOverlay() {
   let overlay = document.querySelector(".sidebar-overlay");
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.className = "sidebar-overlay";
     overlay.id = "sidebarOverlay";
-    overlay.style.display = "none";  // start hidden
     document.body.appendChild(overlay);
   }
-  _sidebarOverlayEl = overlay;
+  return overlay;
+}
 
-  // ─── Hamburger → open sidebar ──────────────────────────────
-  if (_sidebarToggleEl) {
-    _sidebarToggleEl.addEventListener("click", function (e) {
+function openSidebarMobile() {
+  if (!isMobileViewport()) return;  // Never run on desktop
+  const sidebar = document.getElementById("sidebar");
+  const overlay = ensureSidebarOverlay();
+  if (!sidebar) return;
+  sidebar.classList.add("is-open");
+  overlay.classList.add("is-visible");
+  document.body.classList.add("sidebar-locked");
+}
+
+function closeSidebarMobile() {
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.querySelector(".sidebar-overlay");
+  if (sidebar) sidebar.classList.remove("is-open");
+  if (overlay) overlay.classList.remove("is-visible");
+  document.body.classList.remove("sidebar-locked");
+}
+
+function isSidebarOpenMobile() {
+  const sidebar = document.getElementById("sidebar");
+  return !!(sidebar && sidebar.classList.contains("is-open"));
+}
+
+function initSidebar() {
+  const toggle  = document.getElementById("sidebarToggle");
+  const closeBtn = document.getElementById("sidebarCloseBtn");
+  const overlay = ensureSidebarOverlay();
+
+  // ─── Hamburger button → open ───────────────────────────────
+  if (toggle) {
+    toggle.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      if (isSidebarOpenMobile()) {
-        closeSidebarMobile();
-      } else {
-        openSidebarMobile();
-      }
+      openSidebarMobile();
     });
   }
 
-  // ─── ✕ button inside sidebar → close ──────────────────────
-  if (_sidebarCloseEl) {
-    _sidebarCloseEl.addEventListener("click", function (e) {
+  // ─── ✕ button inside sidebar → close ───────────────────────
+  if (closeBtn) {
+    closeBtn.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
       closeSidebarMobile();
     });
   }
 
-  // ─── Tap on dark overlay → close ──────────────────────────
-  _sidebarOverlayEl.addEventListener("click", function (e) {
+  // ─── Click on dark overlay → close ─────────────────────────
+  overlay.addEventListener("click", function (e) {
     e.preventDefault();
     closeSidebarMobile();
   });
 
-  // ─── ESC key → close ──────────────────────────────────────
+  // ─── ESC key → close ───────────────────────────────────────
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && isSidebarOpenMobile()) {
       closeSidebarMobile();
     }
   });
 
-  // ─── Manager-only sidebar items ───────────────────────────
+  // ─── Manager-only actions ──────────────────────────────────
   document.querySelectorAll('.sidebar-nav-item[data-action]').forEach(function (btn) {
     const action = btn.dataset.action;
     if (action === "manage-users") {
@@ -1359,18 +1541,19 @@ function initSidebar() {
     }
   });
 
-  // ─── Auto-clean on resize to desktop ──────────────────────
+  // ─── On resize: if we cross to desktop, force-clean state ──
   let resizeTimer = null;
   window.addEventListener("resize", function () {
     if (resizeTimer) clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
       if (!isMobileViewport()) {
+        // Going to desktop: make sure no leftover mobile state remains
         closeSidebarMobile();
       }
     }, 120);
   });
 
-  // ─── Orientation change ───────────────────────────────────
+  // ─── Orientation change (mobile pivot) ─────────────────────
   window.addEventListener("orientationchange", function () {
     setTimeout(closeSidebarMobile, 200);
   });
