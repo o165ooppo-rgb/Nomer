@@ -1249,90 +1249,105 @@ function toggleFab() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// ▓▓▓▓▓  S I D E B A R   —   B U I L T   F R O M   S C R A T C H  ▓▓▓▓▓
+// ▓▓▓ SIDEBAR — ROCK-SOLID IMPLEMENTATION ▓▓▓
+//
 // Two distinct behaviors:
-// • Desktop (≥ 901px): sidebar always visible, no JS needed for show/hide.
-// • Mobile  (≤ 900px): hamburger button toggles sidebar. Uses .is-open class.
-// State is mirrored on body, sidebar, and overlay with simple class flags.
+// • Desktop (≥ 901px): sidebar always visible — no JS needed for show/hide.
+// • Mobile  (≤ 900px): hamburger toggles drawer + dark scrim.
+//
+// Key reliability fixes:
+// • Overlay element created ONCE at init, never queried again from DOM.
+// • Overlay uses inline style.display for show/hide (more reliable than class).
+// • All interactive bits: -webkit-tap-highlight + pointer-events handled.
+// • State is single source of truth (sidebar.is-open class).
 // ═══════════════════════════════════════════════════════════
 
 const MOBILE_BREAKPOINT = 900;
+
+// Cached references (set in initSidebar)
+let _sidebarEl = null;
+let _sidebarOverlayEl = null;
+let _sidebarToggleEl = null;
+let _sidebarCloseEl = null;
 
 function isMobileViewport() {
   return window.innerWidth <= MOBILE_BREAKPOINT;
 }
 
-function ensureSidebarOverlay() {
+function openSidebarMobile() {
+  if (!isMobileViewport()) return;
+  if (!_sidebarEl || !_sidebarOverlayEl) return;
+  _sidebarEl.classList.add("is-open");
+  _sidebarOverlayEl.classList.add("is-visible");
+  _sidebarOverlayEl.style.display = "block";   // explicit show
+  document.body.classList.add("sidebar-locked");
+}
+
+function closeSidebarMobile() {
+  if (!_sidebarEl || !_sidebarOverlayEl) return;
+  _sidebarEl.classList.remove("is-open");
+  _sidebarOverlayEl.classList.remove("is-visible");
+  _sidebarOverlayEl.style.display = "none";    // explicit hide
+  document.body.classList.remove("sidebar-locked");
+}
+
+function isSidebarOpenMobile() {
+  return !!(_sidebarEl && _sidebarEl.classList.contains("is-open"));
+}
+
+function initSidebar() {
+  // ─── Cache DOM references ──────────────────────────────────
+  _sidebarEl = document.getElementById("sidebar");
+  _sidebarToggleEl = document.getElementById("sidebarToggle");
+  _sidebarCloseEl = document.getElementById("sidebarCloseBtn");
+
+  // ─── Create overlay if missing ────────────────────────────
   let overlay = document.querySelector(".sidebar-overlay");
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.className = "sidebar-overlay";
     overlay.id = "sidebarOverlay";
+    overlay.style.display = "none";  // start hidden
     document.body.appendChild(overlay);
   }
-  return overlay;
-}
+  _sidebarOverlayEl = overlay;
 
-function openSidebarMobile() {
-  if (!isMobileViewport()) return;  // Never run on desktop
-  const sidebar = document.getElementById("sidebar");
-  const overlay = ensureSidebarOverlay();
-  if (!sidebar) return;
-  sidebar.classList.add("is-open");
-  overlay.classList.add("is-visible");
-  document.body.classList.add("sidebar-locked");
-}
-
-function closeSidebarMobile() {
-  const sidebar = document.getElementById("sidebar");
-  const overlay = document.querySelector(".sidebar-overlay");
-  if (sidebar) sidebar.classList.remove("is-open");
-  if (overlay) overlay.classList.remove("is-visible");
-  document.body.classList.remove("sidebar-locked");
-}
-
-function isSidebarOpenMobile() {
-  const sidebar = document.getElementById("sidebar");
-  return !!(sidebar && sidebar.classList.contains("is-open"));
-}
-
-function initSidebar() {
-  const toggle  = document.getElementById("sidebarToggle");
-  const closeBtn = document.getElementById("sidebarCloseBtn");
-  const overlay = ensureSidebarOverlay();
-
-  // ─── Hamburger button → open ───────────────────────────────
-  if (toggle) {
-    toggle.addEventListener("click", function (e) {
+  // ─── Hamburger → open sidebar ──────────────────────────────
+  if (_sidebarToggleEl) {
+    _sidebarToggleEl.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      openSidebarMobile();
+      if (isSidebarOpenMobile()) {
+        closeSidebarMobile();
+      } else {
+        openSidebarMobile();
+      }
     });
   }
 
-  // ─── ✕ button inside sidebar → close ───────────────────────
-  if (closeBtn) {
-    closeBtn.addEventListener("click", function (e) {
+  // ─── ✕ button inside sidebar → close ──────────────────────
+  if (_sidebarCloseEl) {
+    _sidebarCloseEl.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
       closeSidebarMobile();
     });
   }
 
-  // ─── Click on dark overlay → close ─────────────────────────
-  overlay.addEventListener("click", function (e) {
+  // ─── Tap on dark overlay → close ──────────────────────────
+  _sidebarOverlayEl.addEventListener("click", function (e) {
     e.preventDefault();
     closeSidebarMobile();
   });
 
-  // ─── ESC key → close ───────────────────────────────────────
+  // ─── ESC key → close ──────────────────────────────────────
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && isSidebarOpenMobile()) {
       closeSidebarMobile();
     }
   });
 
-  // ─── Manager-only actions ──────────────────────────────────
+  // ─── Manager-only sidebar items ───────────────────────────
   document.querySelectorAll('.sidebar-nav-item[data-action]').forEach(function (btn) {
     const action = btn.dataset.action;
     if (action === "manage-users") {
@@ -1344,19 +1359,18 @@ function initSidebar() {
     }
   });
 
-  // ─── On resize: if we cross to desktop, force-clean state ──
+  // ─── Auto-clean on resize to desktop ──────────────────────
   let resizeTimer = null;
   window.addEventListener("resize", function () {
     if (resizeTimer) clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
       if (!isMobileViewport()) {
-        // Going to desktop: make sure no leftover mobile state remains
         closeSidebarMobile();
       }
     }, 120);
   });
 
-  // ─── Orientation change (mobile pivot) ─────────────────────
+  // ─── Orientation change ───────────────────────────────────
   window.addEventListener("orientationchange", function () {
     setTimeout(closeSidebarMobile, 200);
   });
