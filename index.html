@@ -2,12 +2,24 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#f2f2f7" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#007aff" />
   <title>Mone Manager</title>
+
+  <!-- ═══ PWA — Installable on home screen ═══ -->
+  <!-- Web App Manifest (inline as data URI so site works as a single bundle) -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- iOS / Safari PWA support -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Mone" />
+
+  <!-- App icons — inline SVG as data URI (no extra files needed) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23007aff'/><stop offset='1' stop-color='%230066dd'/></linearGradient></defs><rect width='256' height='256' rx='56' fill='url(%23g)'/><text x='128' y='168' text-anchor='middle' font-family='-apple-system,BlinkMacSystemFont,sans-serif' font-size='140' font-weight='800' fill='white'>M</text></svg>" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23007aff'/><stop offset='1' stop-color='%230066dd'/></linearGradient></defs><rect width='256' height='256' rx='56' fill='url(%23g)'/><text x='128' y='168' text-anchor='middle' font-family='-apple-system,BlinkMacSystemFont,sans-serif' font-size='140' font-weight='800' fill='white'>M</text></svg>" />
+
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet" />
 </head>
@@ -27,8 +39,8 @@
       </div>
 
       <div class="lock-input-wrap">
-        <input type="text" id="lockLogin" class="lock-input" placeholder="Логин" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" />
-        <input type="password" id="lockPassword" class="lock-input" placeholder="Пароль" autocomplete="current-password" />
+        <input type="text" id="lockLogin" class="lock-input" placeholder="Логин" autocomplete="off" style="letter-spacing:normal;" />
+        <input type="password" id="lockPassword" class="lock-input" placeholder="Пароль" autocomplete="off" />
         <button class="lock-btn" id="lockBtn">Войти</button>
       </div>
       <p class="lock-error" id="lockError"></p>
@@ -79,6 +91,9 @@
             <div class="suc-role" id="sucRole">Администратор</div>
           </div>
         </div>
+        <button class="sidebar-install-btn" id="btnInstallPwa" style="display:none;" title="Установить как приложение">
+          <span>📲</span><span>Установить приложение</span>
+        </button>
         <button class="sidebar-export-btn" id="btnExportXls" title="Экспорт в Excel">
           <span>📊</span><span>Отчёт Excel</span>
         </button>
@@ -88,17 +103,17 @@
       </div>
     </aside>
 
-    <!-- SIDEBAR TOGGLE (mobile/tablet) -->
-    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Открыть меню" aria-expanded="false">
-      <span class="hamburger"><span></span><span></span><span></span></span>
-    </button>
-
     <!-- MAIN CONTENT AREA -->
     <div class="content-area" id="contentArea">
 
       <!-- HEADER -->
       <header class="header">
         <div class="header-inner">
+          <!-- Hamburger integrated into header (mobile only) -->
+          <button class="header-hamburger" id="sidebarToggle" aria-label="Открыть меню">
+            <span class="hamburger"><span></span><span></span><span></span></span>
+          </button>
+
           <div class="header-left">
             <div class="header-date" id="headerDate"></div>
             <div class="header-role-badge" id="headerRoleBadge"></div>
@@ -153,9 +168,9 @@
         <div class="view-number" id="vNumber"></div>
         <div class="view-meta" id="vMeta"></div>
         <div class="view-actions">
-          <button class="action-btn action-edit manager-only" id="vBtnEdit" aria-label="Изменить">✏️</button>
-          <button class="action-btn action-delete manager-only" id="vBtnDelete" aria-label="Удалить">🗑</button>
-          <button class="action-btn action-close" id="vBtnClose" aria-label="Закрыть">✕</button>
+          <button class="action-btn action-edit manager-only" id="vBtnEdit">✏️ Изменить</button>
+          <button class="action-btn action-delete manager-only" id="vBtnDelete">🗑 Удалить</button>
+          <button class="action-btn action-close" id="vBtnClose">✕</button>
         </div>
       </div>
       <div class="view-countdown" id="vCountdown"></div>
@@ -212,13 +227,13 @@
       <div class="sheet-handle"></div>
       <div class="users-header">
         <div class="users-title">👥 Управление сотрудниками</div>
-        <button class="action-btn action-close" id="usersClose" aria-label="Закрыть">✕</button>
+        <button class="action-btn action-close" id="usersClose">✕</button>
       </div>
       <div class="users-body">
         <div class="users-add-form">
           <div class="form-row">
-            <div class="form-group"><label>Логин</label><input type="text" id="newUserLogin" placeholder="ivan.petrov" autocapitalize="none" autocorrect="off" /></div>
-            <div class="form-group"><label>Пароль</label><input type="text" id="newUserPassword" placeholder="••••••" autocapitalize="none" autocorrect="off" /></div>
+            <div class="form-group"><label>Логин</label><input type="text" id="newUserLogin" placeholder="ivan.petrov" /></div>
+            <div class="form-group"><label>Пароль</label><input type="text" id="newUserPassword" placeholder="••••••" /></div>
           </div>
           <div class="form-group"><label>Имя сотрудника</label><input type="text" id="newUserName" placeholder="Иванов Иван" /></div>
           <button class="btn-primary" id="btnAddUser" style="width:100%;margin-top:4px;">+ Добавить сотрудника</button>
@@ -236,7 +251,7 @@
       <div class="sheet-handle"></div>
       <div class="users-header">
         <div class="users-title">🗂 Управление категориями</div>
-        <button class="action-btn action-close" id="categoriesClose" aria-label="Закрыть">✕</button>
+        <button class="action-btn action-close" id="categoriesClose">✕</button>
       </div>
       <div class="users-body">
         <p class="cat-help">Добавляйте, переименовывайте, настраивайте поля и удаляйте категории. Никакого программирования — всё с помощью кнопок.</p>
@@ -294,8 +309,8 @@
       <div class="pw-title">Сменить логин и пароль менеджера</div>
       <div class="pw-sub">После смены потребуется снова войти в систему.</div>
       <div class="edit-form" style="padding-top:8px;">
-        <div class="form-group"><label>Новый логин</label><input type="text" id="newAdminLogin" placeholder="admin" autocapitalize="none" autocorrect="off" /></div>
-        <div class="form-group"><label>Новый пароль</label><input type="text" id="newAdminPassword" placeholder="••••••" autocapitalize="none" autocorrect="off" /></div>
+        <div class="form-group"><label>Новый логин</label><input type="text" id="newAdminLogin" placeholder="admin" /></div>
+        <div class="form-group"><label>Новый пароль</label><input type="text" id="newAdminPassword" placeholder="••••••" /></div>
         <p class="pw-error" id="credsError"></p>
       </div>
       <div class="pw-footer">
@@ -323,5 +338,86 @@
     window.db = firebase.database();
   </script>
   <script src="app.js"></script>
+
+  <!-- ═══ PWA: Service Worker + install prompt ═══ -->
+  <script>
+    // 1) Register service worker (gives app offline-ready + installable status)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function (err) {
+          console.log('SW registration skipped:', err.message);
+        });
+      });
+    }
+
+    // 2) Capture install prompt for Android/Chrome and show our own button
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const btn = document.getElementById('btnInstallPwa');
+      if (btn) btn.style.display = 'flex';
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const installBtn = document.getElementById('btnInstallPwa');
+      if (!installBtn) return;
+
+      installBtn.addEventListener('click', async function () {
+        // iOS path: show instructions (iOS Safari has no programmatic install)
+        const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                           || window.navigator.standalone === true;
+
+        if (isStandalone) {
+          alert('✓ Приложение уже установлено и запущено как приложение.');
+          return;
+        }
+
+        if (deferredInstallPrompt) {
+          // Android / Chrome / Edge — native prompt
+          deferredInstallPrompt.prompt();
+          const choice = await deferredInstallPrompt.userChoice;
+          if (choice.outcome === 'accepted') {
+            installBtn.style.display = 'none';
+          }
+          deferredInstallPrompt = null;
+          return;
+        }
+
+        if (isIos) {
+          alert(
+            '📲 Как установить на iPhone/iPad:\n\n' +
+            '1. Нажмите кнопку «Поделиться» внизу Safari (квадрат со стрелкой вверх)\n' +
+            '2. Прокрутите вниз и выберите «На экран «Домой»»\n' +
+            '3. Нажмите «Добавить»\n\n' +
+            'Приложение появится на главном экране как обычное приложение.'
+          );
+          return;
+        }
+
+        alert(
+          'Установка приложения:\n\n' +
+          '• Chrome / Edge: в адресной строке справа значок «Установить»\n' +
+          '• Safari (Mac): меню Файл → «Добавить на Dock»\n' +
+          '• Firefox: в адресной строке значок «+»'
+        );
+      });
+
+      // Hide install button if app is already installed
+      window.addEventListener('appinstalled', function () {
+        installBtn.style.display = 'none';
+        deferredInstallPrompt = null;
+      });
+
+      // Show install button on iOS if not installed yet (since iOS doesn't fire beforeinstallprompt)
+      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                         || window.navigator.standalone === true;
+      if (isIos && !isStandalone) {
+        installBtn.style.display = 'flex';
+      }
+    });
+  </script>
 </body>
 </html>

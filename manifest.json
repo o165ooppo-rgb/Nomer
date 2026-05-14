@@ -1,0 +1,27 @@
+{
+  "name": "Mone Manager",
+  "short_name": "Mone",
+  "description": "Корпоративное управление расходами — телефоны, Wi-Fi, RTKeeper и другие платежи",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f2f2f7",
+  "theme_color": "#007aff",
+  "lang": "ru",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23007aff'/><stop offset='1' stop-color='%230066dd'/></linearGradient></defs><rect width='256' height='256' rx='56' fill='url(%23g)'/><text x='128' y='168' text-anchor='middle' font-family='-apple-system,sans-serif' font-size='140' font-weight='800' fill='white'>M</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23007aff'/><stop offset='1' stop-color='%230066dd'/></linearGradient></defs><rect width='512' height='512' rx='112' fill='url(%23g)'/><text x='256' y='336' text-anchor='middle' font-family='-apple-system,sans-serif' font-size='280' font-weight='800' fill='white'>M</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
