@@ -28,14 +28,14 @@
   <!-- PASSWORD LOCK SCREEN -->
   <div class="lock-screen" id="lockScreen">
     <div class="lock-card">
-      <div class="lock-icon">🔒</div>
+      <div class="lock-mark">M</div>
       <h1 class="lock-title">Mone Manager</h1>
       <p class="lock-sub">Корпоративное управление расходами</p>
 
       <!-- Role selector -->
       <div class="role-tabs">
-        <button class="role-tab active" id="roleTabManager" data-role="manager">👔 Менеджер</button>
-        <button class="role-tab" id="roleTabEmployee" data-role="employee">👤 Сотрудник</button>
+        <button class="role-tab active" id="roleTabManager" data-role="manager">Менеджер</button>
+        <button class="role-tab" id="roleTabEmployee" data-role="employee">Сотрудник</button>
       </div>
 
       <div class="lock-input-wrap">
@@ -55,10 +55,12 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo">
         <div class="logo-icon-wrap">
-          <span class="logo-icon">◈</span>
+          <span class="logo-icon">M</span>
         </div>
         <span class="sidebar-logo-text">Mone</span>
-        <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Закрыть меню">✕</button>
+        <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Закрыть меню">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
       </div>
 
       <nav class="sidebar-nav">
@@ -70,15 +72,12 @@
       <div class="sidebar-section manager-only" id="sidebarManagerSection">
         <div class="sidebar-section-label">Управление</div>
         <button class="sidebar-nav-item" data-action="manage-categories">
-          <span class="snav-icon">🗂</span>
           <span class="snav-label">Категории</span>
         </button>
         <button class="sidebar-nav-item" data-action="manage-users">
-          <span class="snav-icon">👥</span>
           <span class="snav-label">Сотрудники</span>
         </button>
         <button class="sidebar-nav-item" data-action="manage-credentials">
-          <span class="snav-icon">🔑</span>
           <span class="snav-label">Логин и пароль</span>
         </button>
       </div>
@@ -92,13 +91,13 @@
           </div>
         </div>
         <button class="sidebar-install-btn" id="btnInstallPwa" style="display:none;" title="Установить как приложение">
-          <span>📲</span><span>Установить приложение</span>
+          <span>Установить приложение</span>
         </button>
         <button class="sidebar-export-btn" id="btnExportXls" title="Экспорт в Excel">
-          <span>📊</span><span>Отчёт Excel</span>
+          <span>Отчёт Excel</span>
         </button>
         <button class="sidebar-logout-btn" id="btnLogout">
-          <span>⎋</span><span>Выйти</span>
+          <span>Выйти</span>
         </button>
       </div>
     </aside>
@@ -121,22 +120,21 @@
 
           <div class="header-pills">
             <div class="pill pill-neutral"><span id="countTotal">0</span> всего</div>
-            <div class="pill pill-warn" id="pillWarn" style="display:none"><span id="countWarning">0</span> ⚠ скоро</div>
-            <div class="pill pill-danger" id="pillDanger" style="display:none"><span id="countDanger">0</span> 🔴 срочно</div>
+            <div class="pill pill-warn" id="pillWarn" style="display:none"><span id="countWarning">0</span> скоро</div>
+            <div class="pill pill-danger" id="pillDanger" style="display:none"><span id="countDanger">0</span> срочно</div>
           </div>
         </div>
       </header>
 
       <!-- ALERT BANNER -->
       <div class="alert-banner" id="alertBanner" style="display:none;">
-        <span>🔴</span>
         <span id="alertText"></span>
       </div>
 
       <!-- PAYMENT TYPE TABS -->
       <div class="pay-type-tabs">
-        <button class="pay-tab active" id="tabCash" data-type="cash">💵 Наличные</button>
-        <button class="pay-tab" id="tabTransfer" data-type="transfer">🏦 Перечисление</button>
+        <button class="pay-tab active" id="tabCash" data-type="cash">Наличные</button>
+        <button class="pay-tab" id="tabTransfer" data-type="transfer">Перечисление</button>
       </div>
 
       <!-- MAIN — DYNAMIC COLUMNS -->
@@ -168,9 +166,11 @@
         <div class="view-number" id="vNumber"></div>
         <div class="view-meta" id="vMeta"></div>
         <div class="view-actions">
-          <button class="action-btn action-edit manager-only" id="vBtnEdit">✏️ Изменить</button>
-          <button class="action-btn action-delete manager-only" id="vBtnDelete">🗑 Удалить</button>
-          <button class="action-btn action-close" id="vBtnClose">✕</button>
+          <button class="action-btn action-edit manager-only" id="vBtnEdit">Изменить</button>
+          <button class="action-btn action-delete manager-only" id="vBtnDelete">Удалить</button>
+          <button class="action-btn action-close" id="vBtnClose" aria-label="Закрыть">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
         </div>
       </div>
       <div class="view-countdown" id="vCountdown"></div>
@@ -185,7 +185,7 @@
         </div>
       </div>
       <div class="view-footer manager-only">
-        <button class="btn-paid" id="btnMarkPaid">✓ Отметить оплаченным</button>
+        <button class="btn-paid" id="btnMarkPaid">Отметить оплаченным</button>
       </div>
     </div>
   </div>
@@ -210,7 +210,6 @@
   <div class="overlay" id="deleteOverlay">
     <div class="sheet delete-sheet">
       <div class="sheet-handle"></div>
-      <div class="delete-icon">🗑</div>
       <div class="delete-title">Удалить запись?</div>
       <div class="delete-sub" id="deleteSub"></div>
       <div class="delete-footer">
@@ -226,8 +225,10 @@
     <div class="sheet users-sheet">
       <div class="sheet-handle"></div>
       <div class="users-header">
-        <div class="users-title">👥 Управление сотрудниками</div>
-        <button class="action-btn action-close" id="usersClose">✕</button>
+        <div class="users-title">Управление сотрудниками</div>
+        <button class="action-btn action-close" id="usersClose" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
       </div>
       <div class="users-body">
         <div class="users-add-form">
@@ -236,7 +237,7 @@
             <div class="form-group"><label>Пароль</label><input type="text" id="newUserPassword" placeholder="••••••" /></div>
           </div>
           <div class="form-group"><label>Имя сотрудника</label><input type="text" id="newUserName" placeholder="Иванов Иван" /></div>
-          <button class="btn-primary" id="btnAddUser" style="width:100%;margin-top:4px;">+ Добавить сотрудника</button>
+          <button class="btn-primary" id="btnAddUser" style="width:100%;margin-top:4px;">Добавить сотрудника</button>
         </div>
         <div class="users-list-label">Список сотрудников</div>
         <div class="users-list" id="usersList"></div>
@@ -250,8 +251,10 @@
     <div class="sheet users-sheet">
       <div class="sheet-handle"></div>
       <div class="users-header">
-        <div class="users-title">🗂 Управление категориями</div>
-        <button class="action-btn action-close" id="categoriesClose">✕</button>
+        <div class="users-title">Управление категориями</div>
+        <button class="action-btn action-close" id="categoriesClose" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
       </div>
       <div class="users-body">
         <p class="cat-help">Добавляйте, переименовывайте, настраивайте поля и удаляйте категории. Никакого программирования — всё с помощью кнопок.</p>
@@ -262,7 +265,7 @@
             <div class="form-group"><label>Иконка (эмодзи)</label><input type="text" id="newCatIcon" placeholder="📦" maxlength="4" /></div>
           </div>
           <div class="form-group"><label>Подзаголовок (короткое описание)</label><input type="text" id="newCatSub" placeholder="Описание категории" /></div>
-          <button class="btn-primary" id="btnAddCategory" style="width:100%;margin-top:4px;">+ Добавить категорию</button>
+          <button class="btn-primary" id="btnAddCategory" style="width:100%;margin-top:4px;">Добавить категорию</button>
         </div>
 
         <div class="users-list-label">Существующие категории</div>
@@ -276,7 +279,7 @@
   <div class="overlay" id="catEditOverlay">
     <div class="sheet edit-sheet">
       <div class="sheet-handle"></div>
-      <div class="edit-title">✏ Редактировать категорию</div>
+      <div class="edit-title">Редактировать категорию</div>
       <div class="edit-cat-indicator" id="catEditIndicator"></div>
       <div class="edit-form">
         <div class="form-row">
@@ -288,7 +291,7 @@
         <div class="cat-fields-section">
           <div class="cat-fields-header">
             <div class="cat-fields-title">Поля категории</div>
-            <button class="btn-mini-add" id="btnAddField">+ Поле</button>
+            <button class="btn-mini-add" id="btnAddField">Добавить поле</button>
           </div>
           <div class="cat-fields-list" id="catFieldsList"></div>
         </div>
@@ -305,7 +308,6 @@
   <div class="overlay" id="credsOverlay">
     <div class="sheet pw-sheet">
       <div class="sheet-handle"></div>
-      <div class="pw-icon">🔑</div>
       <div class="pw-title">Сменить логин и пароль менеджера</div>
       <div class="pw-sub">После смены потребуется снова войти в систему.</div>
       <div class="edit-form" style="padding-top:8px;">

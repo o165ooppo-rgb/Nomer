@@ -1,7 +1,7 @@
 /* Mone Manager — Service Worker
    Cache-first strategy for app shell. Network for everything else (incl. Firebase). */
 
-const CACHE_NAME = 'mone-manager-v4-zfix';
+const CACHE_NAME = 'mone-manager-v5-clean';
 const APP_SHELL = [
   './',
   './index.html',

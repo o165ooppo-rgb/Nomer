@@ -346,7 +346,7 @@ function applyRoleUI() {
   const badge = document.getElementById("headerRoleBadge");
   if (badge) {
     badge.className = `header-role-badge role-${currentRole}`;
-    badge.textContent = currentRole === "manager" ? "👔 Менеджер" : "👤 Сотрудник";
+    badge.textContent = currentRole === "manager" ? "Менеджер" : "Сотрудник";
   }
 
   const sucName = document.getElementById("sucName");
@@ -491,14 +491,14 @@ function renderColumns() {
     <div class="category-column" id="col-${cat.id}" data-color="${cat.color || 1}">
       <div class="col-header" data-toggle="${cat.id}">
         <div class="col-title-wrap">
-          <span class="col-icon">${escapeHtml(cat.icon || "📦")}</span>
+          <span class="col-icon">${escapeHtml(catGlyph(cat))}</span>
           <div class="col-title-text">
             <div class="col-title">${escapeHtml(cat.name)}</div>
             <div class="col-sub">${escapeHtml(cat.sub || "")}</div>
           </div>
         </div>
         <div class="col-header-actions">
-          <button class="btn-col-add manager-only" data-cat="${cat.id}">+ Добавить</button>
+          <button class="btn-col-add manager-only" data-cat="${cat.id}">Добавить</button>
           <button class="col-toggle-btn" data-cat="${cat.id}" title="Свернуть/Развернуть">▾</button>
         </div>
       </div>
@@ -586,7 +586,7 @@ function renderSidebarCategories() {
     const items = (data[cat.id] || []).filter(i => getPayType(i) === activePayType);
     return `
       <button class="sidebar-nav-item" data-action="scroll" data-cat="${cat.id}">
-        <span class="snav-icon">${escapeHtml(cat.icon || "📦")}</span>
+        <span class="snav-icon">${escapeHtml(catGlyph(cat))}</span>
         <span class="snav-label">${escapeHtml(cat.name)}</span>
         <span class="snav-badge">${items.length}</span>
       </button>
@@ -609,7 +609,7 @@ function renderFabMenu() {
   const menu = document.getElementById("fabMenu");
   if (!menu) return;
   menu.innerHTML = categories.map(cat => `
-    <button class="fab-item" data-cat="${cat.id}">${escapeHtml(cat.icon || "📦")} ${escapeHtml(cat.name)}</button>
+    <button class="fab-item" data-cat="${cat.id}"><span class="fab-glyph">${escapeHtml(catGlyph(cat))}</span><span>${escapeHtml(cat.name)}</span></button>
   `).join("");
   menu.querySelectorAll(".fab-item").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -638,16 +638,16 @@ function renderColumn(catId) {
   const paid   = items.filter(i => getStatus(i) === "paid").length;
 
   let statsHtml = `<span class="col-stat-chip chip-total">${total} записей</span>`;
-  if (ok)     statsHtml += `<span class="col-stat-chip chip-ok">✓ ${ok} ок</span>`;
-  if (warn)   statsHtml += `<span class="col-stat-chip chip-warn">⚠ ${warn} скоро</span>`;
-  if (danger) statsHtml += `<span class="col-stat-chip chip-danger">🔴 ${danger} срочно</span>`;
-  if (paid)   statsHtml += `<span class="col-stat-chip chip-paid">✓ ${paid} опл.</span>`;
+  if (ok)     statsHtml += `<span class="col-stat-chip chip-ok">${ok} в норме</span>`;
+  if (warn)   statsHtml += `<span class="col-stat-chip chip-warn">${warn} скоро</span>`;
+  if (danger) statsHtml += `<span class="col-stat-chip chip-danger">${danger} срочно</span>`;
+  if (paid)   statsHtml += `<span class="col-stat-chip chip-paid">${paid} опл.</span>`;
   statsEl.innerHTML = statsHtml;
 
   cardsEl.innerHTML = "";
   if (!items.length) {
     const typeLabel = activePayType === "cash" ? "наличных" : "перечисления";
-    cardsEl.innerHTML = `<div class="col-empty"><div class="col-empty-emoji">${escapeHtml(cat.icon || "📦")}</div><p>Нет записей для ${typeLabel}.<br>${currentRole === "manager" ? 'Нажмите «+ Добавить»' : ''}</p></div>`;
+    cardsEl.innerHTML = `<div class="col-empty"><div class="col-empty-emoji">${escapeHtml(catGlyph(cat))}</div><p>Нет записей для ${typeLabel}.<br>${currentRole === "manager" ? 'Нажмите «Добавить»' : ''}</p></div>`;
     return;
   }
 
@@ -670,7 +670,7 @@ function renderColumn(catId) {
     // Timer label (under the ring)
     let timerLabel, timerSub;
     if (st === "paid") {
-      timerLabel = "✓";
+      timerLabel = "OK";
       timerSub = "Оплачено";
     } else if (days === 0) {
       timerLabel = "СЕГОДНЯ";
@@ -703,7 +703,7 @@ function renderColumn(catId) {
       !f.primary && !f.secondary && !f.payDay && !f.fee && !f.paidAmount && f.key !== "note"
     );
     const detailHtml = detailField && item[detailField.key]
-      ? `<div class="card-detail"><span class="card-detail-icon">📋</span>${escapeHtml(detailField.label)}: ${escapeHtml(item[detailField.key])}</div>`
+      ? `<div class="card-detail">${escapeHtml(detailField.label)}: ${escapeHtml(item[detailField.key])}</div>`
       : "";
 
     // Balance block (only if we have data)
@@ -717,7 +717,7 @@ function renderColumn(catId) {
       balanceHtml = `
         <div class="card-balance ${balanceClass}">
           <div class="balance-row">
-            <span class="balance-label">💰 Баланс</span>
+            <span class="balance-label">Баланс</span>
             <span class="balance-value">${formatMoney(balance.remaining)}</span>
           </div>
           <div class="balance-row balance-row-sub">
@@ -733,7 +733,7 @@ function renderColumn(catId) {
       balanceHtml = `
         <div class="card-balance bal-empty">
           <div class="balance-row">
-            <span class="balance-label">📋 Тариф</span>
+            <span class="balance-label">Тариф</span>
             <span class="balance-value">${escapeHtml(feeVal)}</span>
           </div>
           <div class="balance-row balance-row-sub">
@@ -750,8 +750,8 @@ function renderColumn(catId) {
     card.style.animationDelay = `${i * 50}ms`;
     card.innerHTML = `
       <div class="card-top">
-        <span class="card-chip" style="background:var(--cat-${c}-bg);color:var(--cat-${c});">${escapeHtml(cat.icon || "📦")} ${escapeHtml(cat.name)}</span>
-        <span class="card-day-chip" title="День оплаты">📅 ${payDay}<small>-е</small></span>
+        <span class="card-chip" style="background:var(--cat-${c}-bg);color:var(--cat-${c});">${escapeHtml(catGlyph(cat))} ${escapeHtml(cat.name)}</span>
+        <span class="card-day-chip" title="День оплаты">${payDay}<small>-е число</small></span>
       </div>
 
       <div class="card-body">
@@ -789,6 +789,16 @@ function renderColumn(catId) {
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// Returns a short visual marker for a category — either its custom icon
+// (if user set one) or the first letter of its name. Keeps the UI clean
+// and consistent: never falls back to a generic box emoji.
+function catGlyph(cat) {
+  if (!cat) return '';
+  if (cat.icon && cat.icon.trim()) return cat.icon.trim();
+  if (cat.name) return cat.name.trim().charAt(0).toUpperCase();
+  return '';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -849,12 +859,12 @@ function openViewModal(catId, id) {
   if (cb) {
     cb.style.background = `var(--cat-${c}-bg)`;
     cb.style.color = `var(--cat-${c})`;
-    cb.textContent = `${cat.icon || "📦"} ${cat.name}`;
+    cb.textContent = `${catGlyph(cat)} ${cat.name}`;
   }
 
   const sb = document.getElementById("vStatusBadge");
   const sbMap  = { ok:"vsb-ok", warn:"vsb-warn", danger:"vsb-danger", paid:"vsb-paid" };
-  const sbText = { ok:`✓ В порядке (${days} дн.)`, warn:`⚠ Скоро (${days} дн.)`, danger:`🔴 СРОЧНО (${days} дн.)`, paid:"✓ Оплачено в этом месяце" };
+  const sbText = { ok:`В норме (${days} дн.)`, warn:`Скоро (${days} дн.)`, danger:`Срочно (${days} дн.)`, paid:"Оплачено в этом месяце" };
   if (sb) { sb.className = `view-status-badge ${sbMap[st]}`; sb.textContent = sbText[st]; }
 
   const primaryField = cat.fields.find(f => f.primary) || cat.fields[0];
@@ -863,18 +873,18 @@ function openViewModal(catId, id) {
   setText("vNumber", item[primaryField.key] || "—");
   const metaEl = document.getElementById("vMeta");
   if (metaEl) {
-    const payLabel = getPayType(item) === "transfer" ? "🏦 Перечисление" : "💵 Наличные";
+    const payLabel = getPayType(item) === "transfer" ? "Перечисление" : "Наличные";
     const sec = secondaryField ? (item[secondaryField.key] || "—") : "";
     metaEl.textContent = `${sec}  •  ${payLabel}`;
   }
 
   const cd = document.getElementById("vCountdown");
   if (cd) {
-    if (st === "paid")      { cd.textContent = "✅ Оплата этого месяца отмечена"; cd.className = "view-countdown cd-paid"; }
-    else if (days === 0)    { cd.textContent = "🔴 Оплатить СЕГОДНЯ!"; cd.className = "view-countdown cd-danger"; }
-    else if (days <= 7)     { cd.textContent = `🔴 Осталось ${days} дн. — СРОЧНО ОПЛАТИТЬ`; cd.className = "view-countdown cd-danger"; }
-    else if (days <= 14)    { cd.textContent = `⚠️ До оплаты ${days} дн. — скоро`; cd.className = "view-countdown cd-warn"; }
-    else                    { cd.textContent = `✅ До оплаты ${days} дн. — всё в порядке`; cd.className = "view-countdown cd-ok"; }
+    if (st === "paid")      { cd.textContent = "Оплата этого месяца отмечена"; cd.className = "view-countdown cd-paid"; }
+    else if (days === 0)    { cd.textContent = "Оплатить сегодня"; cd.className = "view-countdown cd-danger"; }
+    else if (days <= 7)     { cd.textContent = `Осталось ${days} дн. — срочно оплатить`; cd.className = "view-countdown cd-danger"; }
+    else if (days <= 14)    { cd.textContent = `До оплаты ${days} дн. — скоро`; cd.className = "view-countdown cd-warn"; }
+    else                    { cd.textContent = `До оплаты ${days} дн.`; cd.className = "view-countdown cd-ok"; }
   }
 
   // ── BALANCE BLOCK in view modal ──
@@ -892,7 +902,6 @@ function openViewModal(catId, id) {
     balDiv.className = `view-balance bal-${balance.status}`;
     balDiv.innerHTML = `
       <div class="vb-header">
-        <span class="vb-icon">💰</span>
         <div class="vb-titlewrap">
           <div class="vb-title">Баланс счёта</div>
           <div class="vb-sub">Хватит примерно на ${monthsRounded} мес.</div>
@@ -931,7 +940,7 @@ function openViewModal(catId, id) {
   // payment type
   fields.push({
     label: "Тип оплаты",
-    value: getPayType(item) === "transfer" ? "🏦 Перечисление" : "💵 Наличные"
+    value: getPayType(item) === "transfer" ? "Перечисление" : "Наличные"
   });
 
   const vFields = document.getElementById("vFields");
@@ -956,7 +965,7 @@ function openViewModal(catId, id) {
   const btnPaid = document.getElementById("btnMarkPaid");
   if (btnPaid) {
     btnPaid.disabled = item.paidThisMonth;
-    btnPaid.textContent = item.paidThisMonth ? "✓ Уже оплачено" : "✓ Отметить оплаченным";
+    btnPaid.textContent = item.paidThisMonth ? "Уже оплачено" : "Отметить оплаченным";
   }
 
   openOverlay("viewOverlay");
@@ -1008,13 +1017,13 @@ function openEditModal(catId, id = null) {
   currentEditCat = catId;
 
   const titleEl = document.getElementById("editTitle");
-  if (titleEl) titleEl.textContent = id ? "✏ Редактировать запись" : "+ Добавить запись";
+  if (titleEl) titleEl.textContent = id ? "Редактировать запись" : "Добавить запись";
 
   const indicator = document.getElementById("editCatIndicator");
   const c = cat.color || 1;
   if (indicator) {
     indicator.style.color = `var(--cat-${c})`;
-    indicator.textContent = `${cat.icon || "📦"} ${cat.name}`;
+    indicator.textContent = `${catGlyph(cat)} ${cat.name}`;
   }
 
   // build form dynamically
@@ -1142,14 +1151,14 @@ function renderCategoriesList() {
     const itemCount = (data[cat.id] || []).length;
     return `
       <div class="cat-row">
-        <div class="cat-row-icon" style="background:var(--cat-${c}-bg);color:var(--cat-${c});">${escapeHtml(cat.icon || "📦")}</div>
+        <div class="cat-row-icon" style="background:var(--cat-${c}-bg);color:var(--cat-${c});">${escapeHtml(catGlyph(cat))}</div>
         <div class="cat-row-info">
           <div class="cat-row-name">${escapeHtml(cat.name)}</div>
           <div class="cat-row-sub">${escapeHtml(cat.sub || "")} · ${itemCount} записей · ${cat.fields.length} полей</div>
         </div>
         <div class="cat-row-actions">
-          <button class="user-row-edit" data-edit-cat="${cat.id}">✏</button>
-          <button class="user-row-delete" data-del-cat="${cat.id}" ${itemCount > 0 ? 'title="Сначала удалите записи в этой категории"' : ''}>🗑</button>
+          <button class="user-row-edit" data-edit-cat="${cat.id}">Изменить</button>
+          <button class="user-row-delete" data-del-cat="${cat.id}" ${itemCount > 0 ? 'title="Сначала удалите записи в этой категории"' : ''}>Удалить</button>
         </div>
       </div>
     `;
@@ -1165,7 +1174,7 @@ function renderCategoriesList() {
 
 function addCategoryFromForm() {
   const name = (getVal("newCatName") || "").trim();
-  const icon = (getVal("newCatIcon") || "📦").trim();
+  const icon = (getVal("newCatIcon") || "").trim();
   const sub  = (getVal("newCatSub") || "").trim();
   if (!name) { alert("Введите название категории."); return; }
   // generate id
@@ -1176,7 +1185,7 @@ function addCategoryFromForm() {
   if (color === 1 && usedColors.includes(1)) color = (categories.length % 8) + 1;
 
   const newCat = {
-    id, name, icon: icon || "📦", sub, color,
+    id, name, icon: icon, sub, color,
     fields: [
       { key: "name",     label: "Название",            type: "text", required: true, primary: true },
       { key: "company",  label: "Компания",            type: "text", required: true, secondary: true },
@@ -1227,14 +1236,14 @@ function openCategoryEdit(catId) {
   categoryEditFields = JSON.parse(JSON.stringify(cat.fields));
 
   setVal("catEditName", cat.name);
-  setVal("catEditIcon", cat.icon || "📦");
+  setVal("catEditIcon", cat.icon || "");
   setVal("catEditSub", cat.sub || "");
 
   const indicator = document.getElementById("catEditIndicator");
   if (indicator) {
     const c = cat.color || 1;
     indicator.style.color = `var(--cat-${c})`;
-    indicator.textContent = `${cat.icon || "📦"} ${cat.name}`;
+    indicator.textContent = `${catGlyph(cat)} ${cat.name}`;
   }
 
   renderCatFieldsList();
@@ -1259,7 +1268,7 @@ function renderCatFieldsList() {
           <option value="number" ${f.type === "number" ? "selected" : ""}>Число</option>
         </select>
         ${lockNote}
-        ${isCore ? '' : `<button class="fr-del" data-del="${i}">🗑</button>`}
+        ${isCore ? '' : `<button class="fr-del" data-del="${i}" title="Удалить поле">×</button>`}
       </div>
     `;
   }).join("");
@@ -1296,7 +1305,7 @@ function saveCategoryEdit() {
   if (!name) { alert("Введите название категории."); return; }
 
   cat.name = name;
-  cat.icon = icon || "📦";
+  cat.icon = icon;
   cat.sub = sub;
   // sanitize fields: each must have a label
   cat.fields = categoryEditFields.filter(f => (f.label || "").trim().length > 0).map(f => ({
@@ -1337,8 +1346,8 @@ function renderUsersList() {
         <div class="user-row-pw">Пароль: ${escapeHtml(emp.password)}</div>
       </div>
       <div class="user-row-actions">
-        <button class="user-row-edit" data-idx="${i}">✏</button>
-        <button class="user-row-delete" data-idx="${i}">🗑</button>
+        <button class="user-row-edit" data-idx="${i}">Изменить</button>
+        <button class="user-row-delete" data-idx="${i}">Удалить</button>
       </div>
     </div>
   `).join("");
@@ -1602,10 +1611,10 @@ function exportToExcel() {
 
   const statusLabel = (item) => {
     const s = getStatus(item);
-    if (s === "paid")   return "✓ Оплачено";
-    if (s === "danger") return "🔴 СРОЧНО";
-    if (s === "warn")   return "⚠ Скоро";
-    return "✓ В порядке";
+    if (s === "paid")   return "Оплачено";
+    if (s === "danger") return "Срочно";
+    if (s === "warn")   return "Скоро";
+    return "В норме";
   };
   const payTypeLabel = (item) => getPayType(item) === "transfer" ? "Перечисление" : "Наличные";
 
@@ -1622,13 +1631,13 @@ function exportToExcel() {
   .warn td { color: #d35400; }
 </style></head><body>
 <table>
-  <tr class="title-row"><td colspan="20">📊 Mone Manager — Отчёт за ${escapeXml(monthName)}</td></tr>
+  <tr class="title-row"><td colspan="20">Mone Manager — Отчёт за ${escapeXml(monthName)}</td></tr>
   <tr><td colspan="20"></td></tr>`;
 
   categories.forEach(cat => {
     const items = data[cat.id] || [];
     const headers = [...cat.fields.map(f => f.label), "Тип оплаты", "Статус"];
-    html += `<tr class="section-row"><td colspan="${headers.length}">${escapeXml(cat.icon || "📦")} ${escapeXml(cat.name)}</td></tr>`;
+    html += `<tr class="section-row"><td colspan="${headers.length}">${escapeXml(catGlyph(cat))} ${escapeXml(cat.name)}</td></tr>`;
     html += `<tr class="header-row">${headers.map(h => `<td>${escapeXml(h)}</td>`).join("")}</tr>`;
     if (!items.length) {
       html += `<tr class="data-row"><td colspan="${headers.length}" style="color:#aaa;text-align:center;">Нет данных</td></tr>`;
@@ -1662,7 +1671,7 @@ function exportToExcel() {
     return acc + num;
   }, 0);
 
-  html += `<tr class="section-row"><td colspan="10">📋 Итого</td></tr>
+  html += `<tr class="section-row"><td colspan="10">Итого</td></tr>
   <tr class="header-row"><td>Всего записей</td>${categories.map(c => `<td>${escapeXml(c.name)}</td>`).join("")}<td>Оплачено</td><td>Срочно</td><td>Сумма в мес.</td></tr>
   <tr class="data-row">
     <td>${allIt.length}</td>
