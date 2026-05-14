@@ -1605,9 +1605,282 @@ function initSidebar() {
 // EXCEL EXPORT — DYNAMIC
 // ═══════════════════════════════════════════════════════════
 
-function exportToExcel() {
-  const dt  = now();
-  const monthName = dt.toLocaleDateString("ru-RU", { month:"long", year:"numeric" });
+// ═══════════════════════════════════════════════════════════
+// EXCEL REPORT MODAL — preview + filters before download
+// ═══════════════════════════════════════════════════════════
+
+const reportState = {
+  period: "month",        // 'month' | 'prev-month' | 'year' | 'all' | 'custom'
+  dateFrom: null,
+  dateTo: null,
+  categoryIds: [],        // empty = all selected
+  payType: "all",         // 'all' | 'cash' | 'transfer'
+  statusFilter: "all"     // 'all' | 'paid' | 'unpaid'
+};
+
+function openReportModal() {
+  // Initialize state to default: all categories selected, current month
+  reportState.categoryIds = categories.map(c => c.id);
+  reportState.period = "month";
+  reportState.payType = "all";
+  reportState.statusFilter = "all";
+  reportState.dateFrom = null;
+  reportState.dateTo = null;
+
+  renderReportCategoryList();
+  resetReportTabs();
+  updateReportPreview();
+
+  const ov = document.getElementById("reportOverlay");
+  if (ov) ov.classList.add("open");
+}
+
+function closeReportModal() {
+  const ov = document.getElementById("reportOverlay");
+  if (ov) ov.classList.remove("open");
+}
+
+function resetReportTabs() {
+  // Set "месяц" as default active
+  document.querySelectorAll("#reportPeriodTabs .report-period-tab").forEach(b => {
+    b.classList.toggle("active", b.dataset.period === "month");
+  });
+  document.querySelectorAll("#reportPayTabs .report-period-tab").forEach(b => {
+    b.classList.toggle("active", b.dataset.pay === "all");
+  });
+  document.querySelectorAll("#reportStatusTabs .report-period-tab").forEach(b => {
+    b.classList.toggle("active", b.dataset.status === "all");
+  });
+  const cd = document.getElementById("reportCustomDates");
+  if (cd) cd.style.display = "none";
+}
+
+function renderReportCategoryList() {
+  const container = document.getElementById("reportCatList");
+  if (!container) return;
+  container.innerHTML = categories.map(cat => {
+    const count = (data[cat.id] || []).length;
+    const checked = reportState.categoryIds.includes(cat.id);
+    return `
+      <label class="report-cat-row ${checked ? 'is-checked' : ''}">
+        <input type="checkbox" data-cat-id="${cat.id}" ${checked ? 'checked' : ''}>
+        <span class="report-cat-name">${escapeHtml(cat.name)}</span>
+        <span class="report-cat-count">${count}</span>
+      </label>
+    `;
+  }).join("");
+
+  container.querySelectorAll("input[type=checkbox]").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const id = cb.dataset.catId;
+      if (cb.checked) {
+        if (!reportState.categoryIds.includes(id)) reportState.categoryIds.push(id);
+      } else {
+        reportState.categoryIds = reportState.categoryIds.filter(c => c !== id);
+      }
+      cb.closest(".report-cat-row").classList.toggle("is-checked", cb.checked);
+      updateReportPreview();
+    });
+  });
+}
+
+// Compute which items match the current filters
+function getFilteredReportItems() {
+  const result = [];
+  const range = getReportDateRange();
+
+  categories.forEach(cat => {
+    if (!reportState.categoryIds.includes(cat.id)) return;
+    const items = data[cat.id] || [];
+    items.forEach(item => {
+      // Pay type filter
+      const itemPayType = getPayType(item);
+      if (reportState.payType !== "all" && itemPayType !== reportState.payType) return;
+
+      // Status filter
+      if (reportState.statusFilter === "paid" && !item.paidThisMonth) return;
+      if (reportState.statusFilter === "unpaid" && item.paidThisMonth) return;
+
+      // Date range filter
+      if (range) {
+        const itemDate = item.paidAt ? new Date(item.paidAt) : (item.createdAt ? new Date(item.createdAt) : null);
+        if (itemDate) {
+          if (range.from && itemDate < range.from) return;
+          if (range.to && itemDate > range.to) return;
+        }
+        // If no date on item, include only when period is 'all'
+        else if (reportState.period !== "all") {
+          // For items without timestamps, treat them as current data and include them
+          // when period is current month / year (most common case)
+          // But for prev-month / custom date — skip them
+          if (reportState.period === "prev-month" || reportState.period === "custom") return;
+        }
+      }
+
+      result.push({ cat, item });
+    });
+  });
+
+  return result;
+}
+
+function getReportDateRange() {
+  const today = now();
+  const yr = today.getFullYear();
+  const mo = today.getMonth();
+
+  switch (reportState.period) {
+    case "month": {
+      const from = new Date(yr, mo, 1, 0, 0, 0);
+      const to = new Date(yr, mo + 1, 0, 23, 59, 59);
+      return { from, to };
+    }
+    case "prev-month": {
+      const from = new Date(yr, mo - 1, 1, 0, 0, 0);
+      const to = new Date(yr, mo, 0, 23, 59, 59);
+      return { from, to };
+    }
+    case "year": {
+      const from = new Date(yr, 0, 1, 0, 0, 0);
+      const to = new Date(yr, 11, 31, 23, 59, 59);
+      return { from, to };
+    }
+    case "all":
+      return null;
+    case "custom": {
+      const fromStr = reportState.dateFrom;
+      const toStr = reportState.dateTo;
+      if (!fromStr && !toStr) return null;
+      const from = fromStr ? new Date(fromStr + "T00:00:00") : null;
+      const to = toStr ? new Date(toStr + "T23:59:59") : null;
+      return { from, to };
+    }
+    default:
+      return null;
+  }
+}
+
+function updateReportPreview() {
+  const items = getFilteredReportItems();
+  const elCount = document.getElementById("reportPreviewCount");
+  if (elCount) elCount.textContent = items.length;
+}
+
+function getReportPeriodLabel() {
+  const today = now();
+  switch (reportState.period) {
+    case "month": return today.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+    case "prev-month": {
+      const d = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      return d.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+    }
+    case "year": return today.getFullYear() + " год";
+    case "all": return "за всё время";
+    case "custom": {
+      const f = reportState.dateFrom ? new Date(reportState.dateFrom).toLocaleDateString("ru-RU") : "начало";
+      const t = reportState.dateTo ? new Date(reportState.dateTo).toLocaleDateString("ru-RU") : "сегодня";
+      return `${f} — ${t}`;
+    }
+    default: return "";
+  }
+}
+
+function initReportModal() {
+  // Period tabs
+  document.querySelectorAll("#reportPeriodTabs .report-period-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#reportPeriodTabs .report-period-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      reportState.period = btn.dataset.period;
+      const cd = document.getElementById("reportCustomDates");
+      if (cd) cd.style.display = reportState.period === "custom" ? "block" : "none";
+      updateReportPreview();
+    });
+  });
+
+  // Custom date inputs
+  const dfrom = document.getElementById("reportDateFrom");
+  const dto = document.getElementById("reportDateTo");
+  if (dfrom) dfrom.addEventListener("change", () => { reportState.dateFrom = dfrom.value; updateReportPreview(); });
+  if (dto) dto.addEventListener("change", () => { reportState.dateTo = dto.value; updateReportPreview(); });
+
+  // Pay type tabs
+  document.querySelectorAll("#reportPayTabs .report-period-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#reportPayTabs .report-period-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      reportState.payType = btn.dataset.pay;
+      updateReportPreview();
+    });
+  });
+
+  // Status tabs
+  document.querySelectorAll("#reportStatusTabs .report-period-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#reportStatusTabs .report-period-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      reportState.statusFilter = btn.dataset.status;
+      updateReportPreview();
+    });
+  });
+
+  // Select all / deselect all categories
+  document.getElementById("reportSelectAllCats")?.addEventListener("click", () => {
+    const allSelected = reportState.categoryIds.length === categories.length;
+    reportState.categoryIds = allSelected ? [] : categories.map(c => c.id);
+    renderReportCategoryList();
+    const btn = document.getElementById("reportSelectAllCats");
+    if (btn) btn.textContent = allSelected ? "Выбрать все" : "Снять все";
+    updateReportPreview();
+  });
+
+  // Close / cancel
+  document.getElementById("reportClose")?.addEventListener("click", closeReportModal);
+  document.getElementById("reportCancel")?.addEventListener("click", closeReportModal);
+
+  // Download
+  document.getElementById("reportDownload")?.addEventListener("click", () => {
+    if (reportState.categoryIds.length === 0) {
+      alert("Выберите хотя бы одну категорию");
+      return;
+    }
+    exportToExcel(reportState);
+    closeReportModal();
+  });
+}
+
+function exportToExcel(opts) {
+  // opts is reportState — if missing, fall back to "everything"
+  const options = opts || {
+    period: "month",
+    payType: "all",
+    statusFilter: "all",
+    categoryIds: categories.map(c => c.id)
+  };
+  const dt = now();
+  const periodLabel = (function () {
+    switch (options.period) {
+      case "month": return dt.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+      case "prev-month": {
+        const d = new Date(dt.getFullYear(), dt.getMonth() - 1, 1);
+        return d.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+      }
+      case "year": return dt.getFullYear() + " год";
+      case "all": return "за всё время";
+      case "custom": {
+        const f = options.dateFrom ? new Date(options.dateFrom).toLocaleDateString("ru-RU") : "начало";
+        const t = options.dateTo ? new Date(options.dateTo).toLocaleDateString("ru-RU") : "сегодня";
+        return `${f} — ${t}`;
+      }
+      default: return dt.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+    }
+  })();
+
+  // Filter description for header
+  const payLabel = options.payType === "cash" ? "только наличные" :
+                   options.payType === "transfer" ? "только перечисление" : "все типы оплаты";
+  const statusLabelFilter = options.statusFilter === "paid" ? "только оплаченные" :
+                             options.statusFilter === "unpaid" ? "только неоплаченные" : "все статусы";
 
   const statusLabel = (item) => {
     const s = getStatus(item);
@@ -1618,10 +1891,20 @@ function exportToExcel() {
   };
   const payTypeLabel = (item) => getPayType(item) === "transfer" ? "Перечисление" : "Наличные";
 
+  // Helper: apply filters
+  const matchesFilters = (item, cat) => {
+    const itemPayType = getPayType(item);
+    if (options.payType !== "all" && itemPayType !== options.payType) return false;
+    if (options.statusFilter === "paid" && !item.paidThisMonth) return false;
+    if (options.statusFilter === "unpaid" && item.paidThisMonth) return false;
+    return true;
+  };
+
   let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="UTF-8"><style>
   body { font-family: Calibri, sans-serif; font-size: 11pt; }
   .title-row td { font-size: 14pt; font-weight: bold; background: #1a5276; color: #fff; padding: 8px 12px; }
+  .subtitle-row td { font-size: 10pt; background: #ebf5fb; color: #21618c; padding: 6px 12px; font-style: italic; }
   .section-row td { font-size: 12pt; font-weight: bold; background: #2980b9; color: #fff; padding: 6px 10px; }
   .header-row td { font-weight: bold; background: #d6eaf8; color: #1a5276; padding: 5px 10px; border: 1px solid #aed6f1; font-size: 10pt; }
   .data-row td { padding: 5px 10px; border: 1px solid #d5d8dc; font-size: 10pt; }
@@ -1629,21 +1912,43 @@ function exportToExcel() {
   .paid td { color: #1e8449; }
   .danger td { color: #cb4335; font-weight: bold; }
   .warn td { color: #d35400; }
+  .empty-row td { color: #aaa; text-align: center; font-style: italic; }
 </style></head><body>
 <table>
-  <tr class="title-row"><td colspan="20">Mone Manager — Отчёт за ${escapeXml(monthName)}</td></tr>
+  <tr class="title-row"><td colspan="20">Mone Manager — Отчёт</td></tr>
+  <tr class="subtitle-row"><td colspan="20">Период: ${escapeXml(periodLabel)} • Тип оплаты: ${escapeXml(payLabel)} • Статус: ${escapeXml(statusLabelFilter)}</td></tr>
   <tr><td colspan="20"></td></tr>`;
 
+  // Counters
+  let totalCount = 0;
+  let totalSum = 0;
+  let paidCount = 0;
+  let dangerCount = 0;
+
   categories.forEach(cat => {
-    const items = data[cat.id] || [];
+    if (!options.categoryIds.includes(cat.id)) return;
+    const items = (data[cat.id] || []).filter(item => matchesFilters(item, cat));
     const headers = [...cat.fields.map(f => f.label), "Тип оплаты", "Статус"];
-    html += `<tr class="section-row"><td colspan="${headers.length}">${escapeXml(catGlyph(cat))} ${escapeXml(cat.name)}</td></tr>`;
+
+    html += `<tr class="section-row"><td colspan="${headers.length}">${escapeXml(cat.name)} (${items.length})</td></tr>`;
     html += `<tr class="header-row">${headers.map(h => `<td>${escapeXml(h)}</td>`).join("")}</tr>`;
+
     if (!items.length) {
-      html += `<tr class="data-row"><td colspan="${headers.length}" style="color:#aaa;text-align:center;">Нет данных</td></tr>`;
+      html += `<tr class="data-row empty-row"><td colspan="${headers.length}">Нет данных по фильтрам</td></tr>`;
     } else {
       items.forEach(item => {
+        totalCount++;
+        if (item.paidThisMonth) paidCount++;
         const st = getStatus(item);
+        if (st === "danger") dangerCount++;
+
+        // Sum up the fee
+        const feeField = cat.fields.find(f => f.fee);
+        if (feeField) {
+          const num = parseAmount(item[feeField.key]) || 0;
+          totalSum += num;
+        }
+
         const cls = st === "paid" ? "paid" : st === "danger" ? "danger" : st === "warn" ? "warn" : "";
         const cells = cat.fields.map(f => {
           let v = item[f.key];
@@ -1658,27 +1963,20 @@ function exportToExcel() {
   });
 
   // Summary
-  const allIt = allItems();
-  const totalSum = allIt.reduce((acc, item) => {
-    let fee = "";
-    const cat = categories.find(c => c.id === item.cat);
-    if (cat) {
-      const feeField = cat.fields.find(f => f.fee);
-      if (feeField) fee = item[feeField.key] || "";
-    }
-    if (!fee) fee = item.fee || item.abFee || "0";
-    const num = parseFloat(String(fee).replace(/[^\d.]/g, "")) || 0;
-    return acc + num;
-  }, 0);
-
-  html += `<tr class="section-row"><td colspan="10">Итого</td></tr>
-  <tr class="header-row"><td>Всего записей</td>${categories.map(c => `<td>${escapeXml(c.name)}</td>`).join("")}<td>Оплачено</td><td>Срочно</td><td>Сумма в мес.</td></tr>
+  html += `<tr class="section-row"><td colspan="5">Итого</td></tr>
+  <tr class="header-row">
+    <td>Всего записей</td>
+    <td>Оплачено</td>
+    <td>Срочно</td>
+    <td>Сумма в месяц</td>
+    <td>Период</td>
+  </tr>
   <tr class="data-row">
-    <td>${allIt.length}</td>
-    ${categories.map(c => `<td>${(data[c.id]||[]).length}</td>`).join("")}
-    <td>${allIt.filter(i => i.paidThisMonth).length}</td>
-    <td>${allIt.filter(i => getStatus(i) === "danger").length}</td>
+    <td>${totalCount}</td>
+    <td>${paidCount}</td>
+    <td>${dangerCount}</td>
     <td>${totalSum.toLocaleString("ru-RU")} сум</td>
+    <td>${escapeXml(periodLabel)}</td>
   </tr>
 </table></body></html>`;
 
@@ -1686,7 +1984,8 @@ function exportToExcel() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
   a.href     = url;
-  a.download = `MoneManager_Отчёт_${dt.toLocaleDateString("ru-RU").replace(/\./g,"-")}.xls`;
+  const safeLabel = periodLabel.replace(/[^\wа-яА-Я-]+/gi, "_");
+  a.download = `MoneManager_${safeLabel}_${dt.toLocaleDateString("ru-RU").replace(/\./g,"-")}.xls`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1761,7 +2060,7 @@ function shakeLoginError() {
 
 // Logout & Export
 document.getElementById("btnLogout")?.addEventListener("click", logout);
-document.getElementById("btnExportXls")?.addEventListener("click", () => { exportToExcel(); closeSidebarMobile(); });
+document.getElementById("btnExportXls")?.addEventListener("click", () => { closeSidebarMobile(); openReportModal(); });
 
 // FAB
 document.getElementById("fabAdd")?.addEventListener("click", toggleFab);
@@ -1839,6 +2138,7 @@ loadCategories();
 loadCollapsed();
 loadData();
 initSidebar();
+initReportModal();
 
 setTimeout(() => {
   firebaseReady = true;

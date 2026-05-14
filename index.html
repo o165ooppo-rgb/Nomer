@@ -323,6 +323,86 @@
   </div>
 
 
+  <!-- ═══ EXCEL REPORT CONFIG MODAL ═══ -->
+  <div class="overlay" id="reportOverlay">
+    <div class="sheet report-sheet">
+      <div class="sheet-handle"></div>
+      <div class="users-header">
+        <div class="users-title">Настройка отчёта Excel</div>
+        <button class="action-btn action-close" id="reportClose" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="users-body">
+
+        <!-- Period selection -->
+        <div class="report-section">
+          <div class="report-section-title">Период</div>
+          <div class="report-period-tabs" id="reportPeriodTabs">
+            <button class="report-period-tab active" data-period="month">Текущий месяц</button>
+            <button class="report-period-tab" data-period="prev-month">Прошлый месяц</button>
+            <button class="report-period-tab" data-period="year">Текущий год</button>
+            <button class="report-period-tab" data-period="all">За всё время</button>
+            <button class="report-period-tab" data-period="custom">Своя дата</button>
+          </div>
+          <div class="report-custom-dates" id="reportCustomDates" style="display:none;">
+            <div class="form-row">
+              <div class="form-group">
+                <label>С даты</label>
+                <input type="date" id="reportDateFrom" />
+              </div>
+              <div class="form-group">
+                <label>По дату</label>
+                <input type="date" id="reportDateTo" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categories selection -->
+        <div class="report-section">
+          <div class="report-section-title">
+            <span>Категории</span>
+            <button class="report-link-btn" id="reportSelectAllCats">Выбрать все</button>
+          </div>
+          <div class="report-cat-list" id="reportCatList">
+            <!-- Filled by JS -->
+          </div>
+        </div>
+
+        <!-- Pay type -->
+        <div class="report-section">
+          <div class="report-section-title">Тип оплаты</div>
+          <div class="report-pay-tabs" id="reportPayTabs">
+            <button class="report-period-tab active" data-pay="all">Все</button>
+            <button class="report-period-tab" data-pay="cash">Только наличные</button>
+            <button class="report-period-tab" data-pay="transfer">Только перечисление</button>
+          </div>
+        </div>
+
+        <!-- Status filter -->
+        <div class="report-section">
+          <div class="report-section-title">Статус оплаты</div>
+          <div class="report-status-tabs" id="reportStatusTabs">
+            <button class="report-period-tab active" data-status="all">Все</button>
+            <button class="report-period-tab" data-status="paid">Только оплаченные</button>
+            <button class="report-period-tab" data-status="unpaid">Только неоплаченные</button>
+          </div>
+        </div>
+
+        <!-- Summary preview -->
+        <div class="report-preview" id="reportPreview">
+          Будет включено: <b id="reportPreviewCount">0</b> записей
+        </div>
+      </div>
+      <div class="edit-footer">
+        <button class="btn-ghost" id="reportCancel">Отмена</button>
+        <button class="btn-primary" id="reportDownload">Скачать Excel</button>
+      </div>
+    </div>
+  </div>
+
+
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
