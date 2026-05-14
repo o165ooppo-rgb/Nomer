@@ -1465,6 +1465,18 @@ function ensureSidebarOverlay() {
     overlay = document.createElement("div");
     overlay.className = "sidebar-overlay";
     overlay.id = "sidebarOverlay";
+    // Defensive inline styles in case CSS rules are overridden
+    overlay.style.cssText = [
+      "position:fixed",
+      "inset:0",
+      "z-index:290",
+      "background:rgba(0,0,0,0.55)",
+      "opacity:0",
+      "pointer-events:none",
+      "display:none",
+      "transition:opacity 0.28s ease",
+      "-webkit-tap-highlight-color:transparent"
+    ].join(";");
     document.body.appendChild(overlay);
   }
   return overlay;
@@ -1475,8 +1487,19 @@ function openSidebarMobile() {
   const sidebar = document.getElementById("sidebar");
   const overlay = ensureSidebarOverlay();
   if (!sidebar) return;
-  sidebar.classList.add("is-open");
+
+  // Show overlay (display first, then opacity for transition)
+  overlay.style.display = "block";
+  // Force layout flush so transition triggers
+  void overlay.offsetHeight;
+  overlay.style.opacity = "1";
+  overlay.style.pointerEvents = "auto";
   overlay.classList.add("is-visible");
+
+  // Slide sidebar in
+  sidebar.classList.add("is-open");
+
+  // Lock body scroll
   document.body.classList.add("sidebar-locked");
 }
 
@@ -1484,7 +1507,17 @@ function closeSidebarMobile() {
   const sidebar = document.getElementById("sidebar");
   const overlay = document.querySelector(".sidebar-overlay");
   if (sidebar) sidebar.classList.remove("is-open");
-  if (overlay) overlay.classList.remove("is-visible");
+  if (overlay) {
+    overlay.classList.remove("is-visible");
+    overlay.style.opacity = "0";
+    overlay.style.pointerEvents = "none";
+    // Hide after transition completes
+    setTimeout(() => {
+      if (!overlay.classList.contains("is-visible")) {
+        overlay.style.display = "none";
+      }
+    }, 300);
+  }
   document.body.classList.remove("sidebar-locked");
 }
 
